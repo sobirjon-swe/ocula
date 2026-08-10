@@ -43,14 +43,15 @@ Direktorga hisobot qo'lda ko'chirib beriladi.
 
 ### Backend
 - **Laravel 13** (PHP 8.3+)
-- **PostgreSQL** (yoki MySQL 8) — asosiy baza
+- **PostgreSQL 16+** — asosiy baza (`pg_trgm`, `unaccent` kengaytmalari majburiy)
 - **Redis** — cache, queue, session
-- **Laravel Horizon** — queue monitoring
+- **Laravel Horizon** — queue monitoring (faqat Linux/prod; Windows dev'da `queue:work`)
 - **Laravel Sanctum** — SPA va mobil autentifikatsiya
 - **spatie/laravel-permission** — rollar va ruxsatlar
 - **spatie/laravel-activitylog** — audit log
 - **spatie/laravel-query-builder** — filtr/sort/include
-- **maatwebsite/excel** — hisobotlarni eksport qilish
+- **openspout/openspout** — hisobotlarni eksport qilish (Bosqich 10; `maatwebsite/excel`
+  Laravel 13 ni qo'llamaydi — §15 #26)
 
 ### Frontend
 - **Admin SPA**: React 18 + Vite + TypeScript + TanStack Query + Zustand +
@@ -66,10 +67,15 @@ Direktorga hisobot qo'lda ko'chirib beriladi.
 - **Payme / Click** — onlayn to'lov (keyingi bosqich)
 
 ### Muhim texnik qarorlar
-- Backend faqat **API** beradi (Blade shablonlar ishlatilmaydi, admin panel SPA).
-- **Modulli monolit** — bitta repo, bitta deploy, ichida aniq modullar.
-- Pul **butun son** (tiyinda) yoki `decimal(15,2)`. **Hech qachon float emas.**
+- Backend faqat **API** beradi (`/api/v1/*`). Blade shablonlar ishlatilmaydi —
+  `resources/views` faqat email uchun. Admin panel alohida SPA.
+- **Modulli monolit** — bitta repo, bitta deploy, ichida aniq modullar
+  (`app/Modules/*`). Biznes mantiq `Actions/` va `Services/` da, Controller ichida emas.
+- Pul — **`decimal(15,2)`**, PHP tomonda `Money` value object + `bcmath`.
+  **Hech qachon float emas.** Yaxlitlash: §15 #19.
 - Barcha vaqtlar bazada **UTC**, frontendda `Asia/Tashkent`.
+- Moliyaviy hujjatlar **insert-only**, tuzatish faqat storno (7.21).
+- Tannarx — **FIFO qatlamlari** (7.20).
 
 ---
 
@@ -593,6 +599,52 @@ Har oy har bir filialga reja qo'yiladi (direktor belgilaydi).
 - O'zgartirish tarixi saqlanadi (`valid_from` / `valid_to`) — o'tgan oy
   hisoboti keyingi o'zgarishdan buzilmasligi uchun
 
+### 7.20 Tannarx va COGS — FIFO qatlamlari
+
+Foyda hisoboti (7.8), mukofot (7.12), brak zarari (7.5) va ABC tahlil (6.11) —
+hammasi **sotilgan tovarning tannarxi** ga bog'liq. Metod: **FIFO, qatlamli**.
+
+**Qatlam (`stock_layers`)** — har bir kirim alohida qatlam ochadi:
+- kirim manbai (`purchase`, `transfer_in`, `return`, `adjustment`, `initial`)
+- `unit_cost` — shu partiyaning birlik tannarxi
+- `quantity_in` — kelgan miqdor, `quantity_remaining` — qolgan miqdor
+- `received_at` — FIFO tartibi shu bo'yicha
+
+**Chiqim** (`sale`, `defect`, `consume`, `write_off`, `transfer_out`) qatlamlarni
+`received_at` bo'yicha eng eskisidan sarflaydi. Har sarflash
+`stock_layer_consumptions(layer_id, movement_id, quantity, unit_cost)` ga yoziladi.
+Chiqimning umumiy tannarxi = sarflangan qatlamlar yig'indisi
+→ `stock_movements.cost_total`.
+
+**Qoidalar:**
+- Qatlam **`(variant_id, location_id)`** kesimida. Transfer chiqimi qatlamni
+  sarflaydi, transfer kirimi yangi qatlam ochadi — `unit_cost` sarflangan
+  o'rtacha tannarx bo'ladi (yo'lda tovar qimmatlashmaydi).
+- Qoldiq yetmasa (`quantity_remaining` yig'indisi < talab) — **xato**, salbiy
+  qoldiqqa yo'l qo'yilmaydi. Istisno: inventarizatsiya ortiqchasi
+  (`adjustment` kirim) yangi qatlam ochadi.
+- Qatlami yo'q chiqim (masalan boshlang'ich ma'lumot xatosi) — `unit_cost = 0`
+  bilan yoziladi va `stock_movements.cost_incomplete = true` bayrog'i qo'yiladi,
+  hisobotda ko'rinadi.
+- Individual buyurtma linzasi ombordan o'tmaydi (7.13) — uning tannarxi
+  `order_items.cost_total` ga **to'g'ridan-to'g'ri** yoziladi, qatlam ochilmaydi.
+- Qatlamlar va sarflashlar — **insert-only** (7.21). Storno qilinganda
+  `quantity_remaining` qaytariladi va teskari `consumption` yoziladi.
+
+### 7.21 Moliyaviy hujjatlar o'zgarmas — storno qoidasi
+
+`stock_movements`, `stock_layers`, `stock_layer_consumptions`, `payments`,
+`cash_movements` — **insert-only**. Ular:
+- **o'chirilmaydi** (`DELETE` yo'q, soft delete ham yo'q),
+- **tahrirlanmaydi** (`updated_at` ustuni yo'q).
+
+Xato bo'lsa — **storno**: teskari ishorali yangi yozuv, `reverses_id` orqali
+asl yozuvga bog'lanadi va `reason` majburiy. Asl yozuv joyida qoladi.
+
+Sabab: 7.1 dagi "qoldiq = harakatlar yig'indisi" tamoyili va audit log faqat
+shunda ma'noga ega bo'ladi. Hujjat o'zgarsa — kechagi hisobot bugun boshqacha
+chiqadi.
+
 ---
 
 ## 8. MA'LUMOTLAR BAZASI — ASOSIY JADVALLAR
@@ -925,6 +977,13 @@ SEO, manzillar, narxlar, onlayn navbat.
 ❌ Tasdiqlanmagan tovarni ombor qoldig'idan chiqarib tashlash
    ("tovar bor, tizimda yo'q" — eng yomon holat)
 ❌ Filiallar reytingini mutlaq summa bo'yicha qilish (A har doim g'olib)
+❌ **Moliyaviy hujjatni o'chirish yoki tahrirlash** — storno yoziladi (7.21)
+❌ **Tannarxni sotuv paytida "hozirgi kirim narxi" deb olish** — FIFO qatlami
+   sarflanadi (7.20)
+❌ Hisobot kunini kalendar sanasi bo'yicha olish — **smena bo'yicha** (§15 #24)
+❌ Pulni `float`/`double` da saqlash yoki PHP da `+`/`*` bilan hisoblash —
+   faqat `Money` + `bcmath` (§15 #18)
+❌ Salbiy ombor qoldig'iga yo'l qo'yish (7.20)
 
 ---
 
@@ -932,11 +991,16 @@ SEO, manzillar, narxlar, onlayn navbat.
 
 Majburiy test qamrovi:
 - Ombor harakatlari: qoldiq har doim `stock_movements` yig'indisiga teng
-- Transfer: jo'natish → yo'lda → qabul (miqdor farqi bilan)
+- FIFO: qatlamlar tartibi, qisman sarflash, qoldiq yetmasa xato, storno qaytarishi
+- Transfer: jo'natish → yo'lda → qabul (miqdor farqi bilan), tannarx saqlanishi
 - To'lov: qisman to'lov, ortiqcha to'lov, qaytarish
 - Smena yopilishi: kamomad hisoblanishi
 - Buyurtma holatlari: noto'g'ri o'tishga ruxsat berilmasligi
 - Haydovchi balansi: yetkazish → inkassatsiya → nol
+- `Money`: arifmetika, foiz, yaxlitlash (100 so'm), teskari amallar
+- `BranchScope`: filial izolyatsiyasi (`seller` boshqa filial ma'lumotini ko'rmasin)
+- `DocumentNumber`: parallel generatsiyada takrorlanmaslik
+- `Idempotency-Key`: takroriy so'rov ikkinchi hujjat yaratmasligi
 
 ---
 
@@ -959,12 +1023,32 @@ Majburiy test qamrovi:
 | 13 | Filial rejalari | Bor. Reyting **reja %** bo'yicha (7.18) |
 | 14 | Mukofot foizi | Direktor **har bir xodimga alohida** biriktiradi (7.19) |
 
-## 16. HALI OCHIQ
+### Texnik qarorlar (2026-08-10, `docs/ANALIZ.md` asosida)
 
-Barcha asosiy savollar javob oldi. Kod yozish jarayonida chiqadigan
-savollar shu bo'limga qo'shib boriladi.
+| # | Savol | Qaror |
+|---|---|---|
+| 15 | Arxitektura | **Sof API + alohida SPA.** Backend faqat `/api/v1/*` beradi, Blade yo'q. Inertia/Fortify starter kitdan olib tashlandi. Auth — **Sanctum** (SPA cookie + mobil token) |
+| 16 | Repo tuzilmasi | `optika/{backend,admin,customer,landing,mobile,docs}` — §3 bo'yicha. Laravel `backend/` ichida |
+| 17 | Tannarx (COGS) | **FIFO, qatlamli.** `stock_layers` + `stock_layer_consumptions`. Birinchi kirgan birinchi chiqadi. Qarang §7.20 |
+| 18 | Pul tipi | **`decimal(15,2)`**. PHP tomonda `Money` value object + `bcmath`. **Hech qachon float emas** |
+| 19 | Yaxlitlash | Hisob-kitob to'liq aniqlikda; mijozga ko'rsatiladigan **yakuniy** summa `config('optika.money.rounding_step')` (default **100 so'm**, `round half up`) bo'yicha yaxlitlanadi, farq `rounding` qatoriga yoziladi |
+| 20 | Ma'lumotlar bazasi | **PostgreSQL 16+** (`pg_trgm`, `unaccent`). SQLite ishlatilmaydi — testlar ham Postgresda |
+| 21 | Cache / Queue | **Redis** + Horizon (prod). Windows dev mashinasida Horizon ishlamaydi (`ext-pcntl` yo'q) — dev'da `queue:work` |
+| 22 | Sotuv location'i | 1-versiyada har filialda **bitta `warehouse`** location. `floor` ishlatilmaydi (sxema qo'llab-quvvatlaydi, keyin qo'shiladi) |
+| 23 | Moliyaviy hujjatlar | **Insert-only.** `stock_movements`, `stock_layer_consumptions`, `payments`, `cash_movements` o'chirilmaydi va tahrirlanmaydi — faqat **storno**. Qarang §7.21 |
+| 24 | Hisobot kuni | **Smena bo'yicha**, kalendar sanasi bo'yicha emas (22:00 dan keyingi yozuv ertangi kunga tushmasin) |
+| 25 | Hujjat raqami | `{BRANCH_CODE}-{YY}{MM}-{NNNNN}`, `document_sequences` jadvali + `SELECT ... FOR UPDATE` |
+| 26 | Excel eksport | `maatwebsite/excel` Laravel 13 ni **qo'llamaydi** (v1.1.5 ga tushadi, 20 ta CVE). Bosqich 10 da `openspout/openspout` ishlatiladi |
+
+## 16. HALI OCHIQ
 
 Ish jarayonida aniqlashtiriladi:
 - Mukofot bazasi: sotuv summasidanmi yoki foydadanmi (tavsiya: foydadan)
 - Reja turi: summa / foyda / buyurtmalar soni
 - Retsept amal qilish muddati (default 12 oy) — shifokor bilan kelishilsin
+- Individual linza tannarxini kim kiritadi: sotuvchi qo'lda yoki `purchases` bilan
+  bog'lash (`order_items.purchase_item_id`) — `ANALIZ.md` 3.9
+- Mijoz autentifikatsiyasi Telegramsiz: telefon + SMS OTP kerakmi?
+- Fayl saqlash: disk (`local`/S3), maksimal hajm, rasm siqish qoidasi
+- Offline sinxronizatsiya (haydovchi PWA): navbat, qayta yuborish, konflikt qoidalari
+- `prices.valid_to` qo'shilsinmi (narx tarixini tiklash uchun)

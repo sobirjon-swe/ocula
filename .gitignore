@@ -1,32 +1,54 @@
-/.phpunit.cache
-/bootstrap/ssr
-/node_modules
-/public/build
-/public/fonts-manifest.dev.json
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/resources/js/actions
-/resources/js/routes
-/resources/js/wayfinder
-/vendor
-.DS_Store
+# Bog'liqliklar (backend/, admin/, customer/, landing/, mobile/ — barchasi uchun)
+vendor/
+node_modules/
+
+# Build artefaktlari
+dist/
+public/build/
+public/hot
+public/storage
+public/fonts-manifest.dev.json
+bootstrap/ssr/
+
+# Laravel storage
+storage/*.key
+storage/pail
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+
+# Muhit
 .env
-.env.backup
-.env.production
-.phpactor.json
+.env.*
+!.env.example
+
+# Test / tahlil keshlari
+.phpunit.cache/
 .phpunit.result.cache
+.phpstan.cache/
+coverage/
+
+# Lokal ma'lumotlar bazasi
+*.sqlite
+*.sqlite-journal
+
+# IDE va OS
+.DS_Store
+.phpactor.json
 Homestead.json
 Homestead.yaml
-npm-debug.log
-yarn-error.log
-/auth.json
+auth.json
 /.fleet
 /.idea
 /.nova
 /.vscode
 /.zed
-*.sqlite
-*.sqlite-journal
+
+# Loglar
+npm-debug.log
+yarn-error.log
+
+# Claude Code
 /.claude
