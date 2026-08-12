@@ -8,6 +8,7 @@ use App\Modules\Core\Enums\ShiftStatus;
 use App\Support\Concerns\BelongsToBranch;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyCast;
+use Carbon\CarbonImmutable;
 use Database\Factories\ShiftFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,10 +27,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $branch_id
  * @property ShiftStatus $status
+ * @property CarbonImmutable|null $opened_at
+ * @property CarbonImmutable|null $closed_at
  * @property Money $opening_cash
  * @property Money|null $expected_cash
  * @property Money|null $actual_cash
  * @property Money|null $difference
+ * @property string|null $note
+ * @property-read Branch|null $branch
+ * @property-read User|null $openedBy
+ * @property-read User|null $closedBy
  */
 class Shift extends Model
 {

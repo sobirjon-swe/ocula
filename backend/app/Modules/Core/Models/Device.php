@@ -20,8 +20,11 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property int $id
  * @property int $branch_id
+ * @property string $name
  * @property DeviceType $type
+ * @property string $token
  * @property array<int, string> $allowed_roles
+ * @property bool $is_active
  */
 class Device extends Model
 {

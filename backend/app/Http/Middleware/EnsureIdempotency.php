@@ -6,7 +6,6 @@ namespace App\Http\Middleware;
 
 use App\Support\Http\ApiResponse;
 use Closure;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,6 +63,11 @@ final class EnsureIdempotency
      * Kalitni band qilishga urinadi. Muvaffaqiyatli bo'lsa `null`,
      * kalit allaqachon bo'lsa — mavjud qator qaytadi.
      *
+     * `insertOrIgnore` (`ON CONFLICT DO NOTHING`) ataylab: unique
+     * buzilishini `catch` qilish PostgreSQL'da ochiq tranzaksiyani
+     * **butunlay bekor qiladi** (`25P02`), keyingi har bir so'rov
+     * xato beradi. Bu yerda esa xato umuman otilmaydi.
+     *
      * @return array<string, mixed>|null
      */
     private function claim(string $key, string $endpoint, string $hash, Request $request): ?array
@@ -71,24 +75,23 @@ final class EnsureIdempotency
         $now = now();
         $ttlHours = (int) config('optika.idempotency.ttl_hours', 24);
 
-        try {
-            DB::table('idempotency_keys')->insert([
-                'key' => $key,
-                'user_id' => $request->user()?->getAuthIdentifier(),
-                'endpoint' => $endpoint,
-                'request_hash' => $hash,
-                'locked_at' => $now,
-                'created_at' => $now,
-                'expires_at' => $now->addHours($ttlHours),
-            ]);
+        $claimed = DB::table('idempotency_keys')->insertOrIgnore([
+            'key' => $key,
+            'user_id' => $request->user()?->getAuthIdentifier(),
+            'endpoint' => $endpoint,
+            'request_hash' => $hash,
+            'locked_at' => $now,
+            'created_at' => $now,
+            'expires_at' => $now->addHours($ttlHours),
+        ]);
 
+        if ($claimed === 1) {
             return null;
-        } catch (QueryException) {
-            // unique(key) buzildi — demak bu takroriy so'rov.
-            $row = DB::table('idempotency_keys')->where('key', $key)->first();
-
-            return $row === null ? null : (array) $row;
         }
+
+        $row = DB::table('idempotency_keys')->where('key', $key)->first();
+
+        return $row === null ? null : (array) $row;
     }
 
     /**

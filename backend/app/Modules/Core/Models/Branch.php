@@ -6,6 +6,7 @@ namespace App\Modules\Core\Models;
 
 use App\Modules\Core\Enums\BranchType;
 use App\Modules\Core\Enums\LocationType;
+use Carbon\CarbonImmutable;
 use Database\Factories\BranchFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +24,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property string $code
  * @property BranchType $type
+ * @property string|null $address
+ * @property string|null $phone
+ * @property string|null $open_time
+ * @property string|null $close_time
  * @property bool $is_active
+ * @property CarbonImmutable|null $created_at
  */
 class Branch extends Model
 {
@@ -33,6 +39,16 @@ class Branch extends Model
     protected $fillable = [
         'name', 'code', 'type', 'address', 'lat', 'lng',
         'open_time', 'close_time', 'phone', 'is_active',
+    ];
+
+    /**
+     * Migratsiyadagi `default` — yangi model bazadan o'qilmasdan turib
+     * javobga chiqqanda ham to'g'ri qiymat bo'lsin.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_active' => true,
     ];
 
     /**
