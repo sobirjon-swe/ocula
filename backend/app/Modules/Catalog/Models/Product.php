@@ -8,6 +8,7 @@ use App\Modules\Catalog\Enums\ProductStatus;
 use App\Modules\Catalog\Enums\ProductType;
 use App\Modules\Core\Models\User;
 use App\Support\Text\Transliterator;
+use Carbon\CarbonImmutable;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Tovar — SCHEMA.md §2, PROJECT.md 7.13, 7.17.
@@ -30,8 +32,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property ProductType $type
  * @property string $name
  * @property string $search_key
+ * @property int|null $brand_id
+ * @property int|null $category_id
+ * @property string $unit
  * @property ProductStatus $status
  * @property bool $quick_created
+ * @property int|null $merged_into_id
+ * @property bool $is_active
+ * @property CarbonImmutable|null $approved_at
+ * @property CarbonImmutable|null $created_at
+ * @property-read Brand|null $brand
+ * @property-read Category|null $category
  */
 class Product extends Model
 {
@@ -40,7 +51,20 @@ class Product extends Model
 
     protected $fillable = [
         'type', 'name', 'brand_id', 'category_id', 'unit',
-        'status', 'quick_created', 'created_by',
+        'status', 'quick_created', 'created_by', 'is_active',
+    ];
+
+    /**
+     * Migratsiyadagi `default` — yangi model bazadan o'qilmasdan turib
+     * javobga chiqqanda ham to'g'ri qiymat bo'lsin.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'unit' => 'pcs',
+        'status' => 'pending',
+        'quick_created' => false,
+        'is_active' => true,
     ];
 
     /**
@@ -154,6 +178,16 @@ class Product extends Model
         if ($key === '') {
             return;
         }
+
+        // `%` operatori seans sozlamasi `pg_trgm.similarity_threshold` ga
+        // tayanadi. Standart 0.3 model raqami bor nomlarni topa olmaydi
+        // (config/optika.php dagi izohga qarang), shuning uchun chegarani
+        // har qidiruvdan oldin o'zimiz qo'yamiz — GIN indeks shundayam
+        // ishlaydi, `similarity() > x` shartidan farqli o'laroq.
+        DB::statement(
+            'SET pg_trgm.similarity_threshold = '
+            .(float) config('optika.catalog.search_threshold', 0.15)
+        );
 
         $query->whereRaw('search_key % ?', [$key])
             ->orderByRaw('similarity(search_key, ?) DESC', [$key]);

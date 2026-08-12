@@ -7,6 +7,7 @@ namespace App\Modules\Catalog\Models;
 use App\Modules\Core\Models\Branch;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyCast;
+use Carbon\CarbonImmutable;
 use Database\Factories\PriceFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $variant_id
  * @property int|null $branch_id
  * @property Money $price
+ * @property CarbonImmutable|null $valid_from
+ * @property CarbonImmutable|null $valid_to
  */
 class Price extends Model
 {

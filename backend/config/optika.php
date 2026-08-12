@@ -53,6 +53,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Katalog qidiruvi — 7.13, ANALIZ 3.14
+    |--------------------------------------------------------------------------
+    |
+    | `pg_trgm` ning standart chegarasi 0.3, lekin haqiqiy tovar nomlarida
+    | model raqami bo'ladi va u o'xshashlikni pasaytiradi:
+    |
+    |     "Рэй бан"      → search_key "reyban"
+    |     "Ray-Ban 3025" → search_key "rayban3025"
+    |     similarity     = 0.20
+    |
+    | Ya'ni 0.3 da hujjat va'da qilgan holat (§10: "Рэй бан" ham "Ray Ban"
+    | ham topsin) ishlamay qolardi. Natijalar o'xshashlik bo'yicha
+    | tartiblangani uchun past chegara eng mos tovarni baribir birinchi
+    | qatorga chiqaradi.
+    |
+    */
+    'catalog' => [
+        'search_threshold' => (float) env('OPTIKA_SEARCH_THRESHOLD', 0.15),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Retsept — 7.11
     |--------------------------------------------------------------------------
     */
