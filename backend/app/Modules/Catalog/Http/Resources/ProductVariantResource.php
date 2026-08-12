@@ -40,6 +40,7 @@ class ProductVariantResource extends JsonResource
             'size' => $this->size,
             'optical_label' => $this->opticalLabel(),
             'is_active' => $this->is_active,
+            'product' => new ProductResource($this->whenLoaded('product')),
         ];
     }
 }

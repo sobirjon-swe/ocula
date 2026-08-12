@@ -44,6 +44,28 @@ final class ProductVariantController extends ApiController
         return ApiResponse::created((new ProductVariantResource($variant))->resolve($request));
     }
 
+    /**
+     * Shtrix-kod bo'yicha qidirish — Bosqich 2 (§11).
+     *
+     * Skaner bitta satr yuboradi, javob esa **tovar bilan birga**
+     * qaytadi: omborchiga variant `id` si emas, "Ray-Ban 3025, qora"
+     * degan nom kerak.
+     *
+     * Kod topilmasa 404 — mijoz uni "yangi tovar qo'shish" oqimiga
+     * o'tish signali sifatida ishlatadi (7.13).
+     */
+    public function byBarcode(Request $request, string $barcode): ProductVariantResource
+    {
+        $this->authorize('viewAny', ProductVariant::class);
+
+        $variant = ProductVariant::query()
+            ->where('barcode', $barcode)
+            ->with('product')
+            ->firstOrFail();
+
+        return new ProductVariantResource($variant);
+    }
+
     public function show(Product $product, ProductVariant $variant): ProductVariantResource
     {
         $this->authorize('view', $variant);

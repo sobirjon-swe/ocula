@@ -39,6 +39,11 @@ Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
         ->only(['index', 'store', 'show', 'update'])
         ->parameters(['variants' => 'variant']);
 
+    // Shtrix-kod skaneri uchun — `{variant}` dan oldin, aks holda
+    // "by-barcode" id deb o'qiladi.
+    Route::get('variants/by-barcode/{barcode}', [ProductVariantController::class, 'byBarcode'])
+        ->name('variants.by-barcode');
+
     Route::get('variants/{variant}/prices', [PriceController::class, 'index'])->name('prices.index');
     Route::get('variants/{variant}/prices/current', [PriceController::class, 'current'])
         ->name('prices.current');

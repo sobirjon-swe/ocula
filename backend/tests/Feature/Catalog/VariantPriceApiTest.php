@@ -191,4 +191,32 @@ final class VariantPriceApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data', null);
     }
+
+    /**
+     * Shtrix-kod skaneri — Bosqich 2 (§11).
+     */
+    #[Test]
+    public function a_variant_is_found_by_its_barcode_together_with_its_product(): void
+    {
+        $variant = ProductVariant::factory()->for($this->product)->create(['barcode' => '4820001234567']);
+        $this->actingAsEmployee(Role::Warehouse, Branch::factory()->create());
+
+        $this->getJson('/api/v1/variants/by-barcode/4820001234567')
+            ->assertOk()
+            ->assertJsonPath('data.id', $variant->id)
+            ->assertJsonPath('data.product.id', $this->product->id)
+            ->assertJsonPath('data.product.name', $this->product->name);
+    }
+
+    /**
+     * Topilmagan kod — 404. Mijoz buni "yangi tovar qo'shish" oqimiga
+     * o'tish signali sifatida ishlatadi (7.13).
+     */
+    #[Test]
+    public function an_unknown_barcode_returns_not_found(): void
+    {
+        $this->actingAsEmployee(Role::Warehouse, Branch::factory()->create());
+
+        $this->getJson('/api/v1/variants/by-barcode/0000000000000')->assertNotFound();
+    }
 }
