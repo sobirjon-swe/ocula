@@ -1,11 +1,16 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-Route::inertia('/', 'welcome')->name('home');
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
-});
-
-require __DIR__.'/settings.php';
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Backend faqat API beradi (PROJECT.md §2, §15 #15). Blade shablonlar
+| ishlatilmaydi — `resources/views` faqat email uchun qoladi.
+|
+| Admin SPA, mijoz kabineti va landing alohida ilovalar sifatida
+| deploy qilinadi. Shuning uchun bu yerda web route yo'q.
+|
+| Sog'liq tekshiruvi: `/up` (bootstrap/app.php da `health`).
+|
+*/

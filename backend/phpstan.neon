@@ -9,5 +9,11 @@ parameters:
         - config/
         - database/
         - routes/
+        - tests/
 
     level: 7
+
+    # Laravel'ning `Seeder::$command` PHPDoc'i `Command` deb yozilgan, ammo
+    # seeder artisan'siz ishga tushirilganda u `null` bo'ladi. Vendor
+    # PHPDoc'lariga so'zsiz ishonmaymiz.
+    treatPhpDocTypesAsCertain: false

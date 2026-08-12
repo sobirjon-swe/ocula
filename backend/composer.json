@@ -1,15 +1,17 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "optika/backend",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "OPTIKA — ko'zoynak do'konlari tarmog'ini avtomatlashtirish (API backend).",
     "keywords": [
         "laravel",
-        "framework"
+        "optika",
+        "erp"
     ],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
+        "ext-bcmath": "*",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.48",
         "laravel/sanctum": "^4.3",
@@ -47,13 +49,11 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
-            "npm install",
-            "npm run build"
+            "@php artisan migrate --force"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "@php artisan dev"
+            "@php artisan serve"
         ],
         "lint": [
             "pint --parallel"
@@ -61,37 +61,25 @@
         "lint:check": [
             "pint --parallel --test"
         ],
-        "ci:check": [
-            "Composer\\Config::disableProcessTimeout",
-            "npm run lint:check",
-            "npm run format:check",
-            "npm run types:check",
-            "@test"
-        ],
         "types:check": [
             "phpstan analyse"
         ],
         "test": [
             "@php artisan config:clear --ansi",
+            "@php artisan test"
+        ],
+        "ci:check": [
+            "Composer\\Config::disableProcessTimeout",
             "@lint:check",
             "@types:check",
-            "@php artisan test"
+            "@test"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],
-        "post-update-cmd": [
-            "@php artisan install:features --ansi",
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
-        ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
-        ],
-        "post-create-project-cmd": [
-            "@php artisan key:generate --ansi",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
@@ -99,12 +87,7 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": [],
-            "installer": {
-                "post-create-project": [
-                    "@php artisan install:features --ansi"
-                ]
-            }
+            "dont-discover": []
         }
     },
     "config": {
@@ -112,7 +95,6 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
-            "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
     },
