@@ -7,6 +7,8 @@ namespace App\Modules\Sales\Actions\Order;
 use App\Modules\Catalog\Models\Price;
 use App\Modules\Catalog\Models\ProductVariant;
 use App\Modules\Catalog\Models\Service;
+use App\Modules\Clinic\Actions\Prescription\CloseTicket;
+use App\Modules\Clinic\Models\Prescription;
 use App\Modules\Core\Enums\SettingKey;
 use App\Modules\Core\Models\Branch;
 use App\Modules\Core\Models\Setting;
@@ -37,7 +39,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class CreateOrder
 {
-    public function __construct(private readonly DeliverOrder $deliver) {}
+    public function __construct(
+        private readonly DeliverOrder $deliver,
+        private readonly CloseTicket $closeTicket,
+    ) {}
 
     /**
      * @param  array<int, array{kind: string, id: int, quantity: int, discount?: string, cost_total?: string, custom_lens_params?: array<string, mixed>|null}>  $items
@@ -87,6 +92,7 @@ final class CreateOrder
             }
 
             $this->applyTotals($author, $order, $subtotal, $discount);
+            $this->closeTicketFor($order, $branch->id);
 
             // Chek tovar berilganda tug'iladi (ENUMS.md §4) — shuning
             // uchun tez savdo darrov topshiriladi va daromad shu payt
@@ -238,6 +244,28 @@ final class CreateOrder
         }
 
         return $author->id;
+    }
+
+    /**
+     * Retsept bo'yicha buyurtma ochilsa, sotuvchidagi tiket yopiladi
+     * (7.11) — uning vazifasi "bu retsept bo'yicha ish bor" deb turish
+     * edi va u bajarildi.
+     *
+     * Faqat **o'z filialining** tiketi yopiladi: mijoz boshqa filialga
+     * kelib eski retsepti bo'yicha buyurtma bersa, asl filialdagi ish
+     * hali bajarilmagan va uning tiketi ochiq qoladi.
+     */
+    private function closeTicketFor(Order $order, int $branchId): void
+    {
+        if ($order->prescription_id === null) {
+            return;
+        }
+
+        $prescription = Prescription::query()->find($order->prescription_id);
+
+        if ($prescription instanceof Prescription) {
+            $this->closeTicket->handle($prescription, $branchId);
+        }
     }
 
     /**

@@ -37,6 +37,10 @@ class StoreOrderRequest extends FormRequest
             'due_date' => ['nullable', 'date'],
             'discount' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
 
+            // Retsept bo'yicha buyurtma — sotuvchi tiketdan yoki
+            // tarixdan ataylab tanlaydi (7.11).
+            'prescription_id' => ['nullable', 'integer', 'exists:prescriptions,id'],
+
             'items' => ['required', 'array', 'min:1'],
             'items.*.kind' => ['required', 'string', 'in:variant,service'],
             'items.*.id' => ['required', 'integer', 'min:1'],

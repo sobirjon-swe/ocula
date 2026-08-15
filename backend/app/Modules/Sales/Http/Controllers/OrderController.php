@@ -90,6 +90,7 @@ final class OrderController extends ApiController
             Money::of($request->string('discount')->toString() ?: '0'),
             OrderDeliveryType::from($request->string('delivery_type')->toString() ?: 'pickup'),
             $request->string('due_date')->toString() ?: null,
+            $request->integer('prescription_id') ?: null,
         );
 
         return ApiResponse::created(
