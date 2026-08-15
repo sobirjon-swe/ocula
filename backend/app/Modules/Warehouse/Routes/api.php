@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Modules\Warehouse\Http\Controllers\DefectController;
+use App\Modules\Warehouse\Http\Controllers\MasterStockController;
 use App\Modules\Warehouse\Http\Controllers\PurchaseController;
 use App\Modules\Warehouse\Http\Controllers\StockController;
 use App\Modules\Warehouse\Http\Controllers\StockRequestController;
@@ -34,6 +36,12 @@ Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
     Route::get('transfers', [TransferController::class, 'index'])->name('transfers.index');
     Route::get('transfers/{transfer}', [TransferController::class, 'show'])->name('transfers.show');
 
+    Route::get('defects', [DefectController::class, 'index'])->name('defects.index');
+    Route::get('defects/{defect}', [DefectController::class, 'show'])->name('defects.show');
+
+    // Usta zaxirasi — `master` turidagi location qoldig'i (§6.6).
+    Route::get('master-stock', [MasterStockController::class, 'index'])->name('master-stock.index');
+
     Route::get('stock-requests', [StockRequestController::class, 'index'])->name('stock-requests.index');
     Route::get('stock-requests/{stockRequest}', [StockRequestController::class, 'show'])
         ->name('stock-requests.show');
@@ -59,6 +67,11 @@ Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
             ->name('transfers.cancel');
         Route::post('transfers/{transfer}/resolve-discrepancy', [TransferController::class, 'resolveDiscrepancy'])
             ->name('transfers.resolve-discrepancy');
+
+        Route::post('master-stock', [MasterStockController::class, 'store'])
+            ->name('master-stock.store');
+        Route::post('defects/{defect}/approve', [DefectController::class, 'approve'])
+            ->name('defects.approve');
 
         Route::post('stock-requests', [StockRequestController::class, 'store'])
             ->name('stock-requests.store');

@@ -19,6 +19,8 @@ use App\Modules\Sales\Models\OrderItem;
 use App\Modules\Sales\Models\OrderReturn;
 use App\Modules\Sales\Models\Payment;
 use App\Modules\Sales\Services\OrderBalance;
+use App\Modules\Warehouse\Actions\Defect\ReportDefect;
+use App\Modules\Warehouse\Enums\DefectReason;
 use App\Modules\Warehouse\Enums\MovementType;
 use App\Modules\Warehouse\Services\StockLedger;
 use App\Support\Documents\DocumentNumber;
@@ -40,9 +42,10 @@ use Illuminate\Validation\ValidationException;
  *    tegilmaydi: foyda hisoboti sotuvdan qaytarishni ayirib hisoblaydi,
  *    shunda "qancha sotildi" va "qancha qaytdi" ikkalasi ham ko'rinadi.
  *
- * `restock = false` — brak. `defects` jadvali Bosqich 6 da keladi,
- * shuning uchun hozircha satr ombor harakatisiz yoziladi va tovar
- * qoldiqqa qaytmaydi.
+ * `restock = false` — brak: tovar qoldiqqa qaytmaydi va `defects` ga
+ * yoziladi (7.5). Ombor harakati yozilmaydi — tovar sotilganda
+ * allaqachon chiqib bo'lgan, uni yana chiqarish qoldiqni ikki marta
+ * kamaytirardi. Yozib qo'yiladigani — **zarar qiymati**.
  */
 final class CreateReturn
 {
@@ -50,6 +53,7 @@ final class CreateReturn
         private readonly StockLedger $ledger,
         private readonly CashRegister $cash,
         private readonly OrderBalance $balance,
+        private readonly ReportDefect $defects,
     ) {}
 
     /**
@@ -162,7 +166,54 @@ final class CreateReturn
             'movement_id' => $movementId,
         ]);
 
+        if (! $restock && $item->itemable_type === ProductVariant::class) {
+            $this->recordDefect($author, $order, $return, $item, $quantity, $lineCost);
+        }
+
         return [$lineAmount, $lineCost];
+    }
+
+    /**
+     * Qaytgan brakni `defects` ga yozadi (7.5).
+     *
+     * Sabab qaytarish sababidan kelib chiqadi: nuqsonli tovar
+     * yetkazib beruvchining javobgarligi, qolganlari esa mijoz
+     * tomonidan. Aniqrog'ini keyin direktor tuzatishi mumkin — muhimi
+     * zarar hisobga tushishi.
+     */
+    private function recordDefect(
+        User $author,
+        Order $order,
+        OrderReturn $return,
+        OrderItem $item,
+        int $quantity,
+        Money $cost,
+    ): void {
+        $location = $order->branch()->firstOrFail()->warehouse();
+
+        if (! $location instanceof Location) {
+            return;
+        }
+
+        $this->defects->handle(
+            $author,
+            $location,
+            $item->itemable_id,
+            $quantity,
+            $this->reasonFor($return),
+            __('sales::return.defect_note', ['number' => $return->number]),
+            ['order_id' => $order->id],
+            fromStock: false,
+            costImpact: $cost,
+            document: $return,
+        );
+    }
+
+    private function reasonFor(OrderReturn $return): DefectReason
+    {
+        return $return->reason === ReturnReason::ProductDefect
+            ? DefectReason::SupplierDefect
+            : DefectReason::CustomerRequest;
     }
 
     /**

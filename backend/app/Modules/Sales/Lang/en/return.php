@@ -8,4 +8,5 @@ return [
     'quantity_exceeds_sold' => 'That many were not sold or were already returned: :available can be returned.',
     'refund_exceeds_paid' => 'The refund exceeds what was paid: :paid paid in total.',
     'payment_reason' => 'Return :number',
+    'defect_note' => 'Return :number — defective, not restocked',
 ];

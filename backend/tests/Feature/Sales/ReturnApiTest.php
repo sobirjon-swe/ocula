@@ -14,7 +14,9 @@ use App\Modules\Sales\Models\Order;
 use App\Modules\Sales\Models\OrderItem;
 use App\Modules\Sales\Models\OrderReturn;
 use App\Modules\Sales\Models\OrderReturnItem;
+use App\Modules\Warehouse\Enums\DefectReason;
 use App\Modules\Warehouse\Enums\MovementType;
+use App\Modules\Warehouse\Models\Defect;
 use App\Modules\Warehouse\Models\StockLayer;
 use App\Modules\Warehouse\Models\StockMovement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,8 +94,13 @@ final class ReturnApiTest extends TestCase
         $this->assertSame('250000.00', Order::findOrFail($orderId)->paid->toString());
     }
 
+    /**
+     * Brak omborga qaytmaydi va `defects` ga yoziladi (7.5). Ombor
+     * harakati yozilmaydi: tovar sotilganda allaqachon chiqib bo'lgan,
+     * uni yana chiqarish qoldiqni ikki marta kamaytirardi.
+     */
     #[Test]
-    public function a_broken_item_does_not_go_back_to_stock(): void
+    public function a_broken_item_does_not_go_back_to_stock_but_is_recorded_as_a_defect(): void
     {
         $this->actingAsEmployee(Role::Seller, $this->branch);
         [$orderId, $itemId] = $this->sellAndPay();
@@ -109,6 +116,33 @@ final class ReturnApiTest extends TestCase
         $line = OrderReturnItem::firstOrFail();
         $this->assertFalse($line->restock);
         $this->assertNull($line->movement_id);
+
+        $defect = Defect::query()->withoutGlobalScopes()->firstOrFail();
+        $this->assertSame(DefectReason::SupplierDefect, $defect->reason);
+        $this->assertSame((int) $orderId, $defect->order_id);
+        $this->assertSame('75000.00', $defect->cost_impact->toString());
+        $this->assertNull($defect->movement_id);
+    }
+
+    /**
+     * Sabab qaytarish sababidan kelib chiqadi: nuqsonsiz tovarni
+     * mijoz qaytarsa, u yetkazib beruvchining aybi emas.
+     */
+    #[Test]
+    public function a_non_defective_return_is_recorded_on_the_customer_side(): void
+    {
+        $this->actingAsEmployee(Role::Seller, $this->branch);
+        [$orderId, $itemId] = $this->sellAndPay();
+
+        $this->postAction("/api/v1/orders/{$orderId}/returns", [
+            'reason' => 'customer_changed_mind',
+            'items' => [['order_item_id' => $itemId, 'quantity' => 1, 'restock' => false]],
+        ])->assertCreated();
+
+        $this->assertSame(
+            DefectReason::CustomerRequest,
+            Defect::query()->withoutGlobalScopes()->firstOrFail()->reason,
+        );
     }
 
     #[Test]

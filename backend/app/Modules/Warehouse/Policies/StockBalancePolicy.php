@@ -44,6 +44,28 @@ final class StockBalancePolicy
         return false;
     }
 
+    /**
+     * Usta zaxirasini ko'rish — PERMISSIONS.md §3
+     * (`warehouse.master_stock.view`).
+     */
+    public function viewMasterStock(User $user): bool
+    {
+        return $user->can('warehouse.master_stock.view');
+    }
+
+    /**
+     * Ombordan usta zaxirasiga berish.
+     *
+     * PERMISSIONS.md da bu amal uchun alohida ruxsat yo'q, chunki u
+     * qo'lda qoldiq ko'chirish — ya'ni `warehouse.adjustment.create`
+     * ning aynan o'zi (direktor va omborchi). Yangi ruxsat o'ylab
+     * topishdan ko'ra mavjudini ishlatgan to'g'riroq.
+     */
+    public function issueToMaster(User $user): bool
+    {
+        return $user->can('warehouse.adjustment.create');
+    }
+
     public function update(User $user, Model $model): bool
     {
         return false;

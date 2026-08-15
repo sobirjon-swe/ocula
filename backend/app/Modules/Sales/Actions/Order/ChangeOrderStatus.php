@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Actions\Order;
 use App\Modules\Core\Models\User;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Models\Order;
+use App\Modules\Workshop\Actions\WorkOrder\CreateWorkOrder;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -22,6 +23,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class ChangeOrderStatus
 {
+    public function __construct(private readonly CreateWorkOrder $createWorkOrder) {}
+
     public function handle(User $author, Order $order, OrderStatus $target): Order
     {
         if ($order->status === $target) {
@@ -42,6 +45,14 @@ final class ChangeOrderStatus
             'status' => $target,
             'status_changed_at' => now(),
         ]);
+
+        // Ustaxonaga o'tgan buyurtma uchun ish buyrug'i **tizim
+        // tomonidan** ochiladi (§6.6): usta ro'yxatga tushgan ishni
+        // ko'radi, uni o'zi yaratmaydi. Shuning uchun PERMISSIONS.md
+        // §6 da `work_order.create` ruxsati ham yo'q.
+        if ($target === OrderStatus::InWorkshop) {
+            $this->createWorkOrder->handle($author, $order);
+        }
 
         return $order;
     }

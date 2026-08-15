@@ -83,6 +83,13 @@ final class DeliverOrder
             return $item->cost_total;
         }
 
+        // Material ustaxonada allaqachon sarflangan bo'lsa
+        // (`consume`, ANALIZ 3.4), u ombordan bir marta chiqib
+        // bo'lgan. Qaytadan chiqarsak, tovar ikki marta kamayardi.
+        if ($item->movement_id !== null) {
+            return $item->cost_total;
+        }
+
         $movement = $this->ledger->issue(
             $author,
             $location,
