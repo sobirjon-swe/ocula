@@ -29,5 +29,9 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Har doim Http::fake() ostida (Bosqich 7) — haqiqiy token kerak emas. -->
+        <env name="TELEGRAM_BOT_TOKEN" value="test-token"/>
+        <env name="TELEGRAM_BOT_USERNAME" value="optika_test_bot"/>
+        <env name="TELEGRAM_WEBHOOK_SECRET" value="test-secret"/>
     </php>
 </phpunit>

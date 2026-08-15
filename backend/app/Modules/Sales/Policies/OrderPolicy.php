@@ -48,6 +48,16 @@ final class OrderPolicy extends ResourcePolicy
         return $user->can('sales.order.cancel') && $this->withinBranch($user, $model);
     }
 
+    /**
+     * Qarz eslatmasini qo'lda yuborish (BOSQICH-7.md §4.2). `finance.debt.remind`
+     * director va accountant'da — ikkalasi ham barcha filialni ko'radi
+     * (PERMISSIONS.md §8), shuning uchun filial cheklovi qo'shilmadi.
+     */
+    public function remindDebt(User $user, Model $model): bool
+    {
+        return $user->can('finance.debt.remind');
+    }
+
     public function delete(User $user, Model $model): bool
     {
         return false;
