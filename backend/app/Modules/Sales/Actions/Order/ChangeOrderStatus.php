@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Actions\Order;
 
 use App\Modules\Core\Models\User;
 use App\Modules\Sales\Enums\OrderStatus;
+use App\Modules\Sales\Events\OrderReady;
 use App\Modules\Sales\Models\Order;
 use App\Modules\Workshop\Actions\WorkOrder\CreateWorkOrder;
 use Illuminate\Validation\ValidationException;
@@ -52,6 +53,14 @@ final class ChangeOrderStatus
         // §6 da `work_order.create` ruxsati ham yo'q.
         if ($target === OrderStatus::InWorkshop) {
             $this->createWorkOrder->handle($author, $order);
+        }
+
+        // Mijozga "buyurtmangiz tayyor" xabari shu hodisadan keladi
+        // (Telegram moduli, BOSQICH-7.md §4.1). `rework` dan qayta
+        // `ready` ga qaytish ham qonuniy o'tish (ENUMS.md §4) — har
+        // safar chinakam qayta tayyor bo'lganda xabar yana ketishi kerak.
+        if ($target === OrderStatus::Ready) {
+            event(new OrderReady($order));
         }
 
         return $order;

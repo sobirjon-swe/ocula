@@ -38,6 +38,9 @@ enum SettingKey: string
     /** GPS mijoz manzilidan shuncha metrdan uzoq bo'lsa belgilanadi — 7.4. */
     case DeliveryGpsToleranceMeters = 'delivery_gps_tolerance_meters';
 
+    /** Ko'rik eslatmasi retsept muddati tugashidan necha kun oldin — 7.11, BOSQICH-7.md §4.3. */
+    case CheckupReminderDaysBefore = 'checkup_reminder_days_before';
+
     /**
      * `config/optika.php` dagi standart qiymat yo'li.
      */
@@ -51,6 +54,7 @@ enum SettingKey: string
             self::DebtReminderDays => 'debts.reminder_days',
             self::DebtDoubtfulAfterDays => 'debts.doubtful_after_days',
             self::DeliveryGpsToleranceMeters => 'delivery.gps_tolerance_meters',
+            self::CheckupReminderDaysBefore => 'telegram.checkup_reminder_days_before',
         };
     }
 
@@ -73,6 +77,7 @@ enum SettingKey: string
             self::PrescriptionValidityMonths => ['integer', 'min:1', 'max:60'],
             self::DebtDoubtfulAfterDays => ['integer', 'min:1', 'max:3650'],
             self::DeliveryGpsToleranceMeters => ['integer', 'min:0', 'max:100000'],
+            self::CheckupReminderDaysBefore => ['integer', 'min:1', 'max:180'],
             self::DebtReminderDays => ['array', 'max:20'],
         };
     }

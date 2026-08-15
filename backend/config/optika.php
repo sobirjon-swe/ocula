@@ -122,6 +122,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Telegram bot — Bosqich 7, BOSQICH-7.md
+    |--------------------------------------------------------------------------
+    */
+    'telegram' => [
+        // Bog'lash kodi shuncha daqiqa amal qiladi (BOSQICH-7.md §3).
+        'link_code_ttl_minutes' => 15,
+
+        // Retsept muddati tugashidan shuncha kun oldin ko'rik eslatmasi
+        // ketadi (7.11, BOSQICH-7.md §4.3).
+        'checkup_reminder_days_before' => 14,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Planshet PIN — 7.14
     |--------------------------------------------------------------------------
     */
