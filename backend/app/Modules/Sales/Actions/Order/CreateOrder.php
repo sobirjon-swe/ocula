@@ -7,7 +7,9 @@ namespace App\Modules\Sales\Actions\Order;
 use App\Modules\Catalog\Models\Price;
 use App\Modules\Catalog\Models\ProductVariant;
 use App\Modules\Catalog\Models\Service;
+use App\Modules\Core\Enums\SettingKey;
 use App\Modules\Core\Models\Branch;
+use App\Modules\Core\Models\Setting;
 use App\Modules\Core\Models\Shift;
 use App\Modules\Core\Models\User;
 use App\Modules\Sales\Enums\CostSource;
@@ -220,7 +222,10 @@ final class CreateOrder
             ]);
         }
 
-        $limit = (int) config('optika.orders.discount_limit_percent', 10);
+        // Limit direktor o'zgartira oladigan sozlama (SCHEMA.md §1) —
+        // `config()` to'g'ridan-to'g'ri o'qilsa, interfeysdan qo'yilgan
+        // qiymat e'tiborsiz qolardi.
+        $limit = (int) Setting::valueFor(SettingKey::DiscountLimitPercent);
 
         if ($subtotal->isZero() || ! $discount->greaterThan($subtotal->percentage($limit))) {
             return null;

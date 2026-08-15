@@ -6,6 +6,7 @@ namespace App\Modules\Core\Models;
 
 use App\Modules\Core\Enums\DeviceType;
 use App\Support\Concerns\BelongsToBranch;
+use Carbon\CarbonImmutable;
 use Database\Factories\DeviceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,7 +25,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property DeviceType $type
  * @property string $token
  * @property array<int, string> $allowed_roles
+ * @property CarbonImmutable|null $last_seen_at
  * @property bool $is_active
+ * @property CarbonImmutable|null $created_at
  */
 class Device extends Model
 {
