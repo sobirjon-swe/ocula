@@ -49,6 +49,12 @@ return [
 
         // Shuncha kundan keyin olinmagan buyurtma `abandoned_at` bilan belgilanadi.
         'abandoned_after_days' => 30,
+
+        // Sotuvchi shu foizgacha chegirma bera oladi (`sales.discount.apply`).
+        // Undan yuqorisi direktor tasdig'ini talab qiladi
+        // (`sales.discount.approve`) va `orders.discount_approved_by` ga
+        // yoziladi — PERMISSIONS.md §4.
+        'discount_limit_percent' => (int) env('OPTIKA_DISCOUNT_LIMIT_PERCENT', 10),
     ],
 
     /*

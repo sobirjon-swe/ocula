@@ -2,7 +2,10 @@
 
 > Manba: `docs/PROJECT.md` §11 (Bosqich 3), 7.3, 7.8, 7.20, 7.21;
 > `docs/SCHEMA.md` §4, §8; `docs/ENUMS.md` §4, §8; `docs/PERMISSIONS.md`.
-> Sana: 2026-08-14. Holat: **kod yozilmagan**, faqat qarorlar qilingan.
+> Reja sanasi: 2026-08-14. **Bajarilgan: 2026-08-15.**
+>
+> Holat: **kod yozilgan va yashil** — Pint, PHPStan level 7, 263 test.
+> Rejadan farq qilgan qarorlar §7 da.
 >
 > Hujjat maqsadi: hujjatlarni qaytadan titkilamasdan ishni davom ettirish.
 > Qarama-qarshilik chiqsa — `PROJECT.md`/`SCHEMA.md` yutadi, bu fayl emas.
@@ -226,7 +229,67 @@ level 7 — 0 xato, barcha testlar.
 
 ---
 
-## 6. Bosqich 3 dan keyin
+## 6. Rejadan farq qilgan qarorlar (2026-08-15)
+
+Quyidagilar yozish paytida aniqlandi — reja bilan ziddiyat chiqsa,
+**shu ro'yxat** haqiqatni aytadi.
+
+1. **`CashLedger` interfeysi ataylab tor.** Unda faqat smenaga kerak
+   bo'lgan to'rtta metod bor (`expectedCash`, `recordShiftOpening`,
+   `recordShortage`, `recordSurplus`). Sales moduli esa `CashRegister`
+   klassiga bevosita bog'lanadi — u `StockLedger` ga qanday bog'langan
+   bo'lsa, shunday. Interfeys **Core**ni Finance'dan ajratish uchun,
+   umumiy abstraksiya uchun emas.
+
+2. **Individual linza — xizmat satri.** Sxemada `itemable_type` faqat
+   `ProductVariant | Service`, `itemable_id` esa `null` bo'la olmaydi.
+   Shuning uchun individual linza `Service` satri sifatida keladi,
+   `custom_lens_params` to'ldiriladi va `cost_total` qo'lda beriladi →
+   `cost_source = manual` (3.9). Yangi jadval kerak bo'lmadi.
+
+3. **Narx so'rovdan olinmaydi.** `POST /orders` da `price` maydoni yo'q:
+   narx katalogdan (`Price::resolveFor`) olinadi. Aks holda so'rovni
+   qo'lda o'zgartirib istalgan summada sotib yuborish mumkin bo'lardi.
+   Sotuvchining yagona dastagi — `discount`.
+
+4. **Tez savdo bitta tranzaksiyada.** `CreateOrder` topshirishni
+   **transaksiya ichida** chaqiradi: qoldiq yetmasa chek ham
+   yaratilmaydi. (Birinchi urinishda tashqarida edi — test yarim
+   qolgan chekni ushladi.)
+
+5. **Qaytarish buyurtma summasini o'zgartirmaydi.** `orders.total` va
+   `orders.cost_total` o'z joyida qoladi, qaytgan pul va tannarx
+   `returns.amount` / `returns.cost_total` da turadi. Foyda hisoboti
+   ikkalasini ayirib hisoblaydi — shunda "qancha sotildi" va "qancha
+   qaytdi" ikkalasi ham ko'rinadi. To'lov esa manfiy `payment` bo'lgani
+   uchun `orders.paid` o'z-o'zidan kamayadi.
+
+6. **`shift_opening` storno qilinmaydi.** Boshlang'ich naqd smenaning
+   o'z ustunida turadi; uni kassa daftaridan tuzatish ikkala raqamni
+   ajratib yuborardi (`CashRegister::reverse()` buni to'sadi).
+
+7. **Avans olingan buyurtma bekor qilinmaydi.** Avval to'lov storno
+   qilinadi, keyin hujjat yopiladi — aks holda kassada egasi yo'q pul
+   qolib ketardi.
+
+8. **Storno toifasi — `correction`** (ENUMS §8 bo'yicha), asl toifa
+   emas. Kunlik hisobotda "tuzatish" alohida qator bo'lib turadi.
+
+9. **`orders.prescription_id` tashqi kalitsiz** — `prescriptions`
+   jadvali Clinic bosqichida keladi (SCHEMA §12 tartibi).
+
+10. **Yangi sozlama:** `config/optika.php` →
+    `orders.discount_limit_percent` (standart `10`). Shundan yuqori
+    chegirma `sales.discount.approve` talab qiladi va
+    `orders.discount_approved_by` ga yoziladi.
+
+11. **`OrderReturnItem::$table = 'return_items'`** — klass nomi
+    `OrderReturn` dan hosil bo'lgani uchun Laravel `order_return_items`
+    deb topardi.
+
+---
+
+## 7. Bosqich 3 dan keyin
 
 1. `Device` CRUD (`core.device.*`) va `Setting` CRUD (`core.settings.*`) —
    Bosqich 1 ro'yxatidan qolgan.

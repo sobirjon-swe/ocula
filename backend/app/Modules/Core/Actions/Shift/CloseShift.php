@@ -7,6 +7,7 @@ namespace App\Modules\Core\Actions\Shift;
 use App\Modules\Core\Enums\ShiftStatus;
 use App\Modules\Core\Models\Shift;
 use App\Modules\Core\Models\User;
+use App\Support\Contracts\CashLedger;
 use App\Support\Money\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,13 +18,18 @@ use Illuminate\Validation\ValidationException;
  * Sotuvchi seyfdagi **haqiqiy** naqdni kiritadi, tizim farqni hisoblaydi:
  * `difference = actual − expected`. Manfiy = kamomad.
  *
- * **Bosqich 1 cheklovi:** kutilgan naqd hozircha smena boshidagi
- * qoldiqqa teng — kassa harakatlari (`cash_movements`, `payments`)
- * Bosqich 3 da paydo bo'ladi. O'sha yerda `expectedCash()` shu
- * jadvallar bo'yicha hisoblanadigan qilib almashtiriladi.
+ * Kutilgan naqd kassa daftaridan olinadi (`CashLedger::expectedCash()`),
+ * so'ng farq bo'lsa daftarga `shortage`/`surplus` yoziladi — shunda
+ * sanoqdan keyin daftar seyfdagi haqiqiy pul bilan mos keladi va
+ * ertangi smena to'g'ri qoldiqdan boshlanadi.
+ *
+ * Tartib muhim: yozuv **hisobdan keyin** qo'yiladi, aks holda kamomad
+ * o'zi kutilgan naqdni kamaytirib, farqni yeb yuborardi.
  */
 final class CloseShift
 {
+    public function __construct(private readonly CashLedger $cash) {}
+
     public function handle(User $closer, Shift $shift, Money $actualCash, ?string $note = null): Shift
     {
         return DB::transaction(function () use ($closer, $shift, $actualCash, $note): Shift {
@@ -35,24 +41,37 @@ final class CloseShift
                 ]);
             }
 
-            $expected = $this->expectedCash($shift);
+            $expected = $this->cash->expectedCash($shift);
+            $difference = $actualCash->minus($expected);
 
             $shift->update([
                 'closed_by' => $closer->id,
                 'closed_at' => now(),
                 'expected_cash' => $expected->toString(),
                 'actual_cash' => $actualCash->toString(),
-                'difference' => $actualCash->minus($expected)->toString(),
+                'difference' => $difference->toString(),
                 'status' => ShiftStatus::Closed,
                 'note' => $note,
             ]);
+
+            $this->recordDifference($closer, $shift, $difference);
 
             return $shift;
         });
     }
 
-    private function expectedCash(Shift $shift): Money
+    private function recordDifference(User $closer, Shift $shift, Money $difference): void
     {
-        return $shift->opening_cash;
+        if ($difference->isZero()) {
+            return;
+        }
+
+        if ($difference->isNegative()) {
+            $this->cash->recordShortage($closer, $shift, $difference->absolute());
+
+            return;
+        }
+
+        $this->cash->recordSurplus($closer, $shift, $difference);
     }
 }
