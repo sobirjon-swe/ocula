@@ -8,11 +8,15 @@ use App\Modules\Warehouse\Console\RebuildStockBalances;
 use App\Modules\Warehouse\Models\Purchase;
 use App\Modules\Warehouse\Models\StockBalance;
 use App\Modules\Warehouse\Models\StockMovement;
+use App\Modules\Warehouse\Models\StockRequest;
 use App\Modules\Warehouse\Models\Supplier;
+use App\Modules\Warehouse\Models\Transfer;
 use App\Modules\Warehouse\Policies\PurchasePolicy;
 use App\Modules\Warehouse\Policies\StockBalancePolicy;
 use App\Modules\Warehouse\Policies\StockMovementPolicy;
+use App\Modules\Warehouse\Policies\StockRequestPolicy;
 use App\Modules\Warehouse\Policies\SupplierPolicy;
+use App\Modules\Warehouse\Policies\TransferPolicy;
 use App\Support\Providers\ModuleServiceProvider;
 
 /**
@@ -38,6 +42,8 @@ final class WarehouseServiceProvider extends ModuleServiceProvider
             Purchase::class => PurchasePolicy::class,
             StockMovement::class => StockMovementPolicy::class,
             StockBalance::class => StockBalancePolicy::class,
+            Transfer::class => TransferPolicy::class,
+            StockRequest::class => StockRequestPolicy::class,
         ];
     }
 

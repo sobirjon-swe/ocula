@@ -109,10 +109,18 @@ class Branch extends Model
     /**
      * 1-versiyada har filialda bitta ombor bo'ladi va sotuv shundan
      * chiqadi (§15 #22).
+     *
+     * `BranchScope` ataylab chetlab o'tiladi: bu yerda filial
+     * **allaqachon qo'lda turibdi**, ya'ni chaqiruvchi uni ko'rish
+     * huquqini boshqa yo'l bilan olgan. Cheklov qolsa, transferni qabul
+     * qilayotgan xodim jo'natuvchi filial omborini topa olmasdi va
+     * hujjat o'z ichida uzilib qolardi.
      */
     public function warehouse(): ?Location
     {
         return $this->locations()
+            ->withoutGlobalScopes()
+            ->where('branch_id', $this->id)
             ->where('type', LocationType::Warehouse)
             ->first();
     }
