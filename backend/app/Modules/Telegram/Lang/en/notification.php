@@ -10,4 +10,9 @@ return [
     'link_failed' => 'The code is invalid or has expired. Ask staff for a new code.',
     'no_customer' => 'No customer is set on this order.',
     'not_linked' => 'Customer is not linked to Telegram.',
+    'delivery_confirmation' => 'Was your order delivered?',
+    'confirmation_yes' => 'Yes',
+    'confirmation_no' => 'No',
+    'delivery_confirmed_reply' => 'Thank you!',
+    'delivery_disputed_reply' => "Got it, we'll look into it.",
 ];

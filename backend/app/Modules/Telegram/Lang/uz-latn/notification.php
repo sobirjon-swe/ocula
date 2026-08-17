@@ -10,4 +10,9 @@ return [
     'link_failed' => "Kod noto'g'ri yoki muddati o'tgan. Sotuvchidan yangi kod so'rang.",
     'no_customer' => "Buyurtmada mijoz ko'rsatilmagan.",
     'not_linked' => 'Mijoz Telegramga ulanmagan.',
+    'delivery_confirmation' => 'Buyurtmangiz yetkazildimi?',
+    'confirmation_yes' => 'Ha',
+    'confirmation_no' => "Yo'q",
+    'delivery_confirmed_reply' => 'Rahmat!',
+    'delivery_disputed_reply' => 'Qabul qilindi, tekshiramiz.',
 ];

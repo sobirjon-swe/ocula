@@ -31,6 +31,13 @@ use Illuminate\Validation\ValidationException;
  * ko'rinardi.
  *
  * Yozuv insert-only: muvaffaqiyatsiz to'lov umuman yozilmaydi.
+ *
+ * `$collectedInField` — haydovchi yetkazishda naqd yig'ganda (7.4,
+ * BOSQICH-8.md §3). Bu holda to'lov `pending` bo'lib yoziladi va
+ * **kassaga darrov tushmaydi** — pul hali haydovchi qo'lida, faqat
+ * inkassatsiyada haqiqiy kassaga kiradi (`Delivery\Actions\Collection\CollectDriverCash`).
+ * Mijozning qarzi esa shu zahoti kamayadi: `paidAmount()` to'lov
+ * holatiga qaramay yig'indini oladi.
  */
 final class RecordPayment
 {
@@ -44,6 +51,7 @@ final class RecordPayment
         Order $order,
         Money $amount,
         PaymentMethod $method,
+        bool $collectedInField = false,
     ): Payment {
         if (! $amount->isPositive()) {
             throw ValidationException::withMessages([
@@ -67,7 +75,7 @@ final class RecordPayment
             ]);
         }
 
-        return DB::transaction(function () use ($author, $order, $amount, $method): Payment {
+        return DB::transaction(function () use ($author, $order, $amount, $method, $collectedInField): Payment {
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
@@ -75,12 +83,16 @@ final class RecordPayment
                 'shift_id' => $order->shift_id,
                 'amount' => $amount->toString(),
                 'method' => $method,
-                'status' => PaymentTxStatus::Completed,
+                'status' => $collectedInField ? PaymentTxStatus::Pending : PaymentTxStatus::Completed,
                 'received_by' => $author->id,
+                'collected_by' => $collectedInField ? $author->id : null,
                 'paid_at' => now(),
             ]);
 
-            if ($method->entersCashRegister()) {
+            // Dala sharoitida yig'ilgan pul hali kassada emas — u
+            // faqat inkassatsiyada haqiqiy kassa yozuvini oladi
+            // (BOSQICH-8.md §3).
+            if (! $collectedInField && $method->entersCashRegister()) {
                 $this->cash->record(
                     $author,
                     $order->branch_id,

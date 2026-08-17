@@ -6,6 +6,7 @@ namespace App\Modules\Warehouse\Models;
 
 use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
+use App\Modules\Delivery\Models\Trip;
 use App\Modules\Warehouse\Enums\DeliveryMethod;
 use App\Modules\Warehouse\Enums\TransferStatus;
 use App\Modules\Warehouse\Scopes\TwoSidedBranchScope;
@@ -146,6 +147,17 @@ class Transfer extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Yo'l varaqasi — Bosqich 8, BOSQICH-8.md §2. `own_driver` usulida
+     * jo'natilgan transfer haydovchining reysiga bog'lanadi.
+     *
+     * @return BelongsTo<Trip, $this>
+     */
+    public function trip(): BelongsTo
+    {
+        return $this->belongsTo(Trip::class);
     }
 
     /**

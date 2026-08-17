@@ -24,12 +24,17 @@ final class SendTelegramNotification
 {
     public function __construct(private readonly TelegramClient $client) {}
 
+    /**
+     * @param  array<string, mixed>|null  $replyMarkup  Inline tugmalar
+     *                                                  (BOSQICH-8.md §4) — masalan, yetkazish tasdig'i so'rovi.
+     */
     public function handle(
         Customer $customer,
         NotificationType $type,
         string $message,
         ?Model $source = null,
         ?string $dedupeKey = null,
+        ?array $replyMarkup = null,
     ): ?TelegramNotification {
         if ($customer->telegram_id === null) {
             return null;
@@ -40,7 +45,7 @@ final class SendTelegramNotification
         }
 
         try {
-            $this->client->sendMessage($customer->telegram_id, $message);
+            $this->client->sendMessage($customer->telegram_id, $message, $replyMarkup);
             $status = NotificationStatus::Sent;
             $error = null;
         } catch (Throwable $exception) {

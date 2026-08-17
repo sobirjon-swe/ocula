@@ -17,4 +17,7 @@ enum NotificationType: string
 
     /** Ko'rik/retsept eslatmasi — PROJECT.md 7.11. */
     case CheckupReminder = 'checkup_reminder';
+
+    /** Yetkazish tasdig'i so'rovi — PROJECT.md 7.4, BOSQICH-8.md §4. */
+    case DeliveryConfirmation = 'delivery_confirmation';
 }
