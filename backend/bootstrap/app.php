@@ -19,7 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // SPA (admin, mijoz kabineti) cookie orqali, mobil — Bearer token.
+        // Admin SPA cookie orqali (statefulApi). Mijoz kabineti (Mini App)
+        // Bearer token bilan — u Telegram webview ichida, boshqa
+        // origin'dan ishlaydi (BOSQICH-9.md §3, §5 #3).
         $middleware->statefulApi();
 
         $middleware->api(append: [
