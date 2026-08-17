@@ -7,6 +7,7 @@ use App\Modules\Core\CoreServiceProvider;
 use App\Modules\Customer\CustomerServiceProvider;
 use App\Modules\Delivery\DeliveryServiceProvider;
 use App\Modules\Finance\FinanceServiceProvider;
+use App\Modules\Payroll\PayrollServiceProvider;
 use App\Modules\Sales\SalesServiceProvider;
 use App\Modules\Telegram\TelegramServiceProvider;
 use App\Modules\Warehouse\WarehouseServiceProvider;
@@ -25,6 +26,7 @@ return [
     WorkshopServiceProvider::class,
     DeliveryServiceProvider::class,
     FinanceServiceProvider::class,
+    PayrollServiceProvider::class,
     CustomerServiceProvider::class,
     AnalyticsServiceProvider::class,
     TelegramServiceProvider::class,

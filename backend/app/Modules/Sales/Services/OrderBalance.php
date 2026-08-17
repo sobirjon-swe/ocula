@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Modules\Finance\Services\DebtRegistry;
+use App\Modules\Payroll\Services\BonusAccrual;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Enums\PaymentStatus;
 use App\Modules\Sales\Models\Order;
@@ -23,7 +24,10 @@ use App\Support\Money\Money;
  */
 final class OrderBalance
 {
-    public function __construct(private readonly DebtRegistry $debts) {}
+    public function __construct(
+        private readonly DebtRegistry $debts,
+        private readonly BonusAccrual $bonuses,
+    ) {}
 
     public function refresh(Order $order): Order
     {
@@ -77,5 +81,7 @@ final class OrderBalance
             'status' => OrderStatus::Closed,
             'status_changed_at' => now(),
         ]);
+
+        $this->bonuses->accrueForOrder($order);
     }
 }
