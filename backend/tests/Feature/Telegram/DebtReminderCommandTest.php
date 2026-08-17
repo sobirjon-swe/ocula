@@ -6,6 +6,8 @@ namespace Tests\Feature\Telegram;
 
 use App\Modules\Core\Models\Branch;
 use App\Modules\Core\Models\User;
+use App\Modules\Finance\Models\DebtReminder;
+use App\Modules\Finance\Services\DebtRegistry;
 use App\Modules\Sales\Models\Customer;
 use App\Modules\Sales\Models\Order;
 use App\Modules\Telegram\Models\TelegramNotification;
@@ -53,6 +55,8 @@ final class DebtReminderCommandTest extends TestCase
             1,
             TelegramNotification::query()->where('source_id', $order->id)->count(),
         );
+
+        $this->assertSame(1, DebtReminder::query()->count());
     }
 
     #[Test]
@@ -85,12 +89,18 @@ final class DebtReminderCommandTest extends TestCase
 
     private function orderWithDebt(Customer $customer, string $dueDate): Order
     {
-        return Order::factory()->create([
+        $order = Order::factory()->create([
             'branch_id' => $this->branch->id,
             'customer_id' => $customer->id,
             'created_by' => $this->author->id,
+            'total' => '150000',
+            'paid' => '0',
             'debt' => '150000',
             'due_date' => $dueDate,
         ]);
+
+        app(DebtRegistry::class)->syncForOrder($order);
+
+        return $order;
     }
 }

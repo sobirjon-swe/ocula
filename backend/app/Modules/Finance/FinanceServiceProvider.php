@@ -5,7 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Finance;
 
 use App\Modules\Finance\Models\CashMovement;
+use App\Modules\Finance\Models\Debt;
+use App\Modules\Finance\Models\Expense;
+use App\Modules\Finance\Models\ExpenseCategory;
+use App\Modules\Finance\Models\SupplierTransaction;
 use App\Modules\Finance\Policies\CashMovementPolicy;
+use App\Modules\Finance\Policies\DebtPolicy;
+use App\Modules\Finance\Policies\ExpenseCategoryPolicy;
+use App\Modules\Finance\Policies\ExpensePolicy;
+use App\Modules\Finance\Policies\SupplierTransactionPolicy;
 use App\Modules\Finance\Services\CashRegister;
 use App\Support\Contracts\CashLedger;
 use App\Support\Providers\ModuleServiceProvider;
@@ -30,6 +38,10 @@ final class FinanceServiceProvider extends ModuleServiceProvider
     {
         return [
             CashMovement::class => CashMovementPolicy::class,
+            ExpenseCategory::class => ExpenseCategoryPolicy::class,
+            Expense::class => ExpensePolicy::class,
+            Debt::class => DebtPolicy::class,
+            SupplierTransaction::class => SupplierTransactionPolicy::class,
         ];
     }
 

@@ -11,6 +11,7 @@ use App\Modules\Core\Enums\Role;
 use App\Modules\Core\Models\Branch;
 use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
+use App\Modules\Finance\Models\Expense;
 use App\Modules\Warehouse\Enums\DeliveryMethod;
 use App\Modules\Warehouse\Enums\MovementType;
 use App\Modules\Warehouse\Enums\TransferStatus;
@@ -265,6 +266,30 @@ final class TransferApiTest extends TestCase
 
         $this->assertSame(Transfer::class, $transit->owner_type);
         $this->assertSame($transfer->id, $transit->owner_id);
+    }
+
+    /**
+     * BOSQICH-4.md §5 #4 — yopildi (BOSQICH-10.md §10a). Taksi bilan
+     * jo'natish avtomatik xarajat yaratadi, jo'natuvchi filial hisobiga.
+     */
+    #[Test]
+    public function sending_by_taxi_writes_an_automatic_expense(): void
+    {
+        $this->actingAsEmployee(Role::Warehouse, $this->from);
+        $id = $this->postAction('/api/v1/transfers', $this->payload())->json('data.id');
+
+        $this->postAction("/api/v1/transfers/{$id}/send", [
+            'delivery_method' => DeliveryMethod::Taxi->value,
+            'taxi_cost' => '35000',
+        ])->assertOk();
+
+        $expense = Expense::query()->withoutGlobalScopes()
+            ->where('source_type', Transfer::class)
+            ->where('source_id', $id)
+            ->firstOrFail();
+
+        $this->assertSame($this->from->id, $expense->branch_id);
+        $this->assertSame('35000.00', $expense->amount->toString());
     }
 
     #[Test]

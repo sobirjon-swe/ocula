@@ -20,4 +20,6 @@ return [
     'transit_taxi' => 'В пути (такси) — :number',
     'transit_person' => 'В пути — :name',
     'discrepancy_resolved' => 'Расхождение разобрано (:name): :reason',
+    'transport_expense_category' => 'Транспорт',
+    'taxi_expense_description' => 'Такси — перемещение :number',
 ];

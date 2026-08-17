@@ -20,4 +20,6 @@ return [
     'transit_taxi' => "Yo'lda (taksi) — :number",
     'transit_person' => "Yo'lda — :name",
     'discrepancy_resolved' => 'Farq hal qilindi (:name): :reason',
+    'transport_expense_category' => 'Transport',
+    'taxi_expense_description' => 'Taksi — transfer :number',
 ];

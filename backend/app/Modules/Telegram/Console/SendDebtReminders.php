@@ -6,7 +6,9 @@ namespace App\Modules\Telegram\Console;
 
 use App\Modules\Core\Enums\SettingKey;
 use App\Modules\Core\Models\Setting;
-use App\Modules\Sales\Models\Order;
+use App\Modules\Finance\Actions\Debt\RecordDebtReminder;
+use App\Modules\Finance\Enums\ReminderChannel;
+use App\Modules\Finance\Models\Debt;
 use App\Modules\Telegram\Actions\SendTelegramNotification;
 use App\Modules\Telegram\Enums\NotificationStatus;
 use App\Modules\Telegram\Enums\NotificationType;
@@ -15,10 +17,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
 /**
- * Qarz eslatmasi — PROJECT.md 7.6, BOSQICH-7.md §4.2.
+ * Qarz eslatmasi — PROJECT.md 7.6, BOSQICH-7.md §4.2, BOSQICH-10.md §10a.
  *
- * `debts` alohida jadvali hali yo'q (Finance/Bosqich 10) — to'g'ridan-to'g'ri
- * `orders.debt` / `orders.due_date` dan o'qiydi (BOSQICH-7.md §5 #2).
+ * Endi `orders.debt` o'rniga **`debts`** jadvalidan o'qiydi — dedupe
+ * mantig'i o'zgarmadi (`telegram_notifications.dedupe_key`), lekin
+ * yuborilgach endi **`debt_reminders`** ga ham yozadi
+ * (`channel=telegram`) — CRM jurnali, xodim keyin qo'lda ham eslatma
+ * qo'shishi mumkin.
  *
  * Eslatma kunlari sozlanadigan: `SettingKey::DebtReminderDays`, standart
  * `[-1, 0, 3, 7]` — muddatdan 1 kun oldin, muddat kuni, +3, +7.
@@ -29,7 +34,7 @@ final class SendDebtReminders extends Command
 
     protected $description = "Muddati yaqinlashgan/o'tgan qarzlar bo'yicha mijozlarga Telegram eslatma yuboradi";
 
-    public function handle(SendTelegramNotification $sender): int
+    public function handle(SendTelegramNotification $sender, RecordDebtReminder $reminder): int
     {
         /** @var array<int, int> $offsets */
         $offsets = (array) Setting::valueFor(SettingKey::DebtReminderDays);
@@ -39,37 +44,36 @@ final class SendDebtReminders extends Command
         foreach ($offsets as $offset) {
             $dueDate = $today->subDays((int) $offset);
 
-            $orders = Order::query()
-                ->whereNotNull('customer_id')
-                ->whereNotNull('due_date')
+            $debts = Debt::query()
+                ->withoutGlobalScopes()
                 ->whereDate('due_date', $dueDate)
-                ->where('debt', '>', 0)
-                ->with('customer')
+                ->with(['customer', 'order'])
                 ->get();
 
-            foreach ($orders as $order) {
-                if ($order->customer === null) {
+            foreach ($debts as $debt) {
+                if ($debt->customer === null || $debt->order === null || ! $debt->remaining()->isPositive()) {
                     continue;
                 }
 
-                $message = CustomerMessage::for($order->customer, 'telegram::notification.debt_reminder', [
-                    'number' => $order->number,
-                    'amount' => $order->debt->toString(),
-                    'due_date' => $order->due_date->toDateString(),
+                $message = CustomerMessage::for($debt->customer, 'telegram::notification.debt_reminder', [
+                    'number' => $debt->order->number,
+                    'amount' => $debt->remaining()->toString(),
+                    'due_date' => $debt->due_date->toDateString(),
                 ]);
 
-                $dedupeKey = sprintf('debt_reminder:order:%d:offset:%d', $order->id, $offset);
+                $dedupeKey = sprintf('debt_reminder:order:%d:offset:%d', $debt->order_id, $offset);
 
                 $result = $sender->handle(
-                    $order->customer,
+                    $debt->customer,
                     NotificationType::DebtReminder,
                     $message,
-                    $order,
+                    $debt->order,
                     $dedupeKey,
                 );
 
                 if ($result?->status === NotificationStatus::Sent) {
                     $sent++;
+                    $reminder->handle(null, $debt, ReminderChannel::Telegram);
                 }
             }
         }
