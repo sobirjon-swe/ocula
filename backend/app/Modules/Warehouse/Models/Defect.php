@@ -9,6 +9,7 @@ use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
 use App\Modules\Sales\Models\Order;
 use App\Modules\Warehouse\Enums\DefectReason;
+use App\Modules\Workshop\Models\WorkOrder;
 use App\Support\Concerns\BelongsToBranch;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyCast;
@@ -98,6 +99,17 @@ class Defect extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * Brak qaysi ish buyrug'idan chiqqani — usta xatosini shu usta
+     * hisobiga yozish uchun (7.12, `master_error`).
+     *
+     * @return BelongsTo<WorkOrder, $this>
+     */
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class);
     }
 
     /**

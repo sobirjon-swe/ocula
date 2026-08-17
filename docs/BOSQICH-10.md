@@ -136,7 +136,100 @@ POST   /supplier-transactions         — qo'lda to'lov/tuzatish
 
 ## 10b — Mukofot (Payroll)
 
-*(keyingi commit)*
+**Holat: bajarilgan va yashil.**
+
+### Hajm
+
+**Kiradi:** `bonus_rules` (shaxsiy foiz rol qoidasidan ustun, 7.19),
+`bonus_entries` (buyurtma yopilganda avtomatik hisoblanadi, 7.12),
+`branch_plans` (oylik filial rejasi, 7.18), qaytarishda mukofotning
+storno qilinishi, mukofotni tasdiqlash/to'lash (kassaga chiqim bilan).
+
+**Kirmaydi:** filial reytingini ko'rsatadigan API (bu Bosqich 10c
+Analitika ishi — reja shu yerda faqat yoziladi/o'qiladi, hisobot
+alohida bosqichda).
+
+### Migratsiyalar
+
+| Fayl | Jadvallar |
+|---|---|
+| `0001_01_01_000500_create_bonus_rules_table.php` | `bonus_rules` |
+| `0001_01_01_000510_create_bonus_entries_table.php` | `bonus_entries` |
+| `0001_01_01_000520_create_branch_plans_table.php` | `branch_plans` |
+
+### Mukofot hisoblash — qachon va kim uchun (7.12)
+
+`OrderBalance::refresh()` buyurtmani `closed` ga o'tkazganda (Bosqich 6
+ish buyrug'i tug'ilishi bilan bir xil naqsh) `BonusAccrual::accrueForOrder()`
+chaqiriladi:
+
+- **Sotuvchi** — `orders.created_by` (rol qoidasi yoki shaxsiy qoida,
+  `base=revenue|profit`).
+- **Shifokor** — `orders.prescription_id → prescriptions.doctor_id`
+  (bor bo'lsa).
+- **Usta** — buyurtmaga tegishli `work_orders.master_id` (bor va
+  `status=done` bo'lsa), `base=count`.
+
+Har biri uchun `BonusRuleResolver` mos qoidani topadi: avval
+`bonus_rules.user_id` (shaxsiy), topilmasa `bonus_rules.role` +
+filialga mos (`branch_id` = xodim filiali yoki `NULL` — filialsiz
+qoida tarmoq bo'yicha umumiy, filialli qoida ustun turadi), faqat
+`valid_from..valid_to` oralig'ida joriy bo'lgani.
+
+Yozuv **idempotent**: `unique(order_id, user_id, rule_id) WHERE reverses_id
+IS NULL` — buyurtma ikki marta "yopilib" qolsa ham mukofot ikki marta
+yozilmaydi (bazaviy cheklov, ilova darajasida ham `firstOrCreate`
+mantig'i bilan qo'llab-quvvatlanadi).
+
+**`base=count` (usta) haqida izoh:** `bonus_rules.percent` ustuni
+`decimal(5,2)` — haqiqiy foiz sifatida saqlanadi, lekin usta uchun
+"foiz"ning tabiiy pul ma'nosi yo'q (ish soni pul emas). Shuning uchun
+`count` bazasida `base_amount` = davr ichida usta yakunlagan (`done`)
+ish buyruqlari soni **minus** o'sha davrda unga bog'langan
+`master_error` braklari soni, `amount = percent% × base_amount` —
+natija **koeffitsient**, aniq to'lov summasi emas. Direktor
+`payroll.bonus.approve`/`pay` bosqichida yakuniy summani real oylik
+siyosatga qarab belgilaydi (tizim faqat hisoblash asosini beradi —
+PROJECT.md bu yerda pul stavkasini belgilamaydi).
+
+### Qaytarish — mukofot storno qilinadi (7.12)
+
+`CreateReturn` (Sales) qaytarish yozgandan keyin `BonusAccrual::reverseForOrder()`
+ni chaqiradi: shu buyurtma bo'yicha **hali to'lanmagan** (`accrued`/`approved`,
+`paid` emas) barcha faol yozuvlar uchun teskari yozuv qo'yiladi
+(`status=reversed`, `reverses_id`). **Soddalashtirish:** qisman
+qaytarishda ham butun yozuv storno qilinadi (proportsional emas) —
+buyurtmaning qaysi qismi qaytarilgani bo'yicha mukofotni qisman
+qaytarish keyingi ish, hozircha "qaytarish bo'lsa — ayiriladi" talabi
+to'liq storno bilan qondiriladi. Mukofot **allaqachon to'langan**
+(`status=paid`) bo'lsa, storno qilinmaydi — bu moliyaviy operatsiya
+qaytarilmaydi, hisobot ustida qo'lda tuzatiladi.
+
+### Filial rejalari (7.18)
+
+`branch_plans` qo'lda kiritiladi (`payroll.plan.manage`, faqat
+direktor) — reyting/progress hisoboti Bosqich 10c'da. Bu yerda faqat
+CRUD.
+
+### API (yangi)
+
+```
+GET    /bonus-rules                   POST /bonus-rules
+GET    /bonus-entries                 — filtrlash: user_id, period, status
+POST   /bonus-entries/{id}/approve
+POST   /bonus-entries/{id}/pay        — kassadan chiqim (bonus_payout)
+
+GET    /branch-plans                  POST /branch-plans
+```
+
+### Testlar
+
+| Fayl | Kafolat |
+|---|---|
+| `Feature/Payroll/BonusRuleResolverTest.php` | Shaxsiy qoida rol qoidasidan ustun; muddati o'tgan qoida ishlatilmaydi |
+| `Feature/Payroll/BonusAccrualTest.php` | Buyurtma yopilganda sotuvchi/shifokor/usta uchun yoziladi; ikki marta yozilmaydi; qaytarishda storno bo'ladi |
+| `Feature/Payroll/BonusApiTest.php` | To'lash kassadan chiqim yozadi; ruxsatlar (`view_own` hammada, `pay` faqat direktor/buxgalter) |
+| `Feature/Payroll/BranchPlanApiTest.php` | Faqat direktor reja qo'ya oladi |
 
 ## 10c — Analitika (Analytics)
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Models;
 
+use App\Modules\Clinic\Models\Prescription;
 use App\Modules\Core\Models\Branch;
 use App\Modules\Core\Models\Shift;
 use App\Modules\Core\Models\User;
@@ -11,6 +12,7 @@ use App\Modules\Sales\Enums\OrderDeliveryType;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Enums\OrderType;
 use App\Modules\Sales\Enums\PaymentStatus;
+use App\Modules\Workshop\Models\WorkOrder;
 use App\Support\Concerns\BelongsToBranch;
 use App\Support\Money\Money;
 use App\Support\Money\MoneyCast;
@@ -21,6 +23,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Buyurtma yoki chek — SCHEMA.md §4, PROJECT.md 7.3, 7.8.
@@ -146,6 +149,22 @@ class Order extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<Prescription, $this>
+     */
+    public function prescription(): BelongsTo
+    {
+        return $this->belongsTo(Prescription::class);
+    }
+
+    /**
+     * @return HasOne<WorkOrder, $this>
+     */
+    public function workOrder(): HasOne
+    {
+        return $this->hasOne(WorkOrder::class);
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
 use App\Modules\Finance\Enums\CashCategory;
 use App\Modules\Finance\Services\CashRegister;
+use App\Modules\Payroll\Services\BonusAccrual;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Enums\PaymentStatus;
@@ -54,6 +55,7 @@ final class CreateReturn
         private readonly CashRegister $cash,
         private readonly OrderBalance $balance,
         private readonly ReportDefect $defects,
+        private readonly BonusAccrual $bonuses,
     ) {}
 
     /**
@@ -278,6 +280,7 @@ final class CreateReturn
         }
 
         $this->balance->refresh($order);
+        $this->bonuses->reverseForOrder($order);
     }
 
     private function assertRefundFits(Order $order, ?Money $refund): void
