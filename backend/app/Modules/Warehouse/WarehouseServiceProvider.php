@@ -6,6 +6,7 @@ namespace App\Modules\Warehouse;
 
 use App\Modules\Warehouse\Console\RebuildStockBalances;
 use App\Modules\Warehouse\Models\Defect;
+use App\Modules\Warehouse\Models\LostSale;
 use App\Modules\Warehouse\Models\Purchase;
 use App\Modules\Warehouse\Models\StockBalance;
 use App\Modules\Warehouse\Models\StockMovement;
@@ -13,6 +14,7 @@ use App\Modules\Warehouse\Models\StockRequest;
 use App\Modules\Warehouse\Models\Supplier;
 use App\Modules\Warehouse\Models\Transfer;
 use App\Modules\Warehouse\Policies\DefectPolicy;
+use App\Modules\Warehouse\Policies\LostSalePolicy;
 use App\Modules\Warehouse\Policies\PurchasePolicy;
 use App\Modules\Warehouse\Policies\StockBalancePolicy;
 use App\Modules\Warehouse\Policies\StockMovementPolicy;
@@ -47,6 +49,7 @@ final class WarehouseServiceProvider extends ModuleServiceProvider
             Transfer::class => TransferPolicy::class,
             StockRequest::class => StockRequestPolicy::class,
             Defect::class => DefectPolicy::class,
+            LostSale::class => LostSalePolicy::class,
         ];
     }
 

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Warehouse\Http\Controllers\DefectController;
+use App\Modules\Warehouse\Http\Controllers\LostSaleController;
 use App\Modules\Warehouse\Http\Controllers\MasterStockController;
 use App\Modules\Warehouse\Http\Controllers\PurchaseController;
 use App\Modules\Warehouse\Http\Controllers\StockController;
@@ -38,6 +39,9 @@ Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
 
     Route::get('defects', [DefectController::class, 'index'])->name('defects.index');
     Route::get('defects/{defect}', [DefectController::class, 'show'])->name('defects.show');
+
+    Route::get('lost-sales', [LostSaleController::class, 'index'])->name('lost_sales.index');
+    Route::post('lost-sales', [LostSaleController::class, 'store'])->name('lost_sales.store');
 
     // Usta zaxirasi — `master` turidagi location qoldig'i (§6.6).
     Route::get('master-stock', [MasterStockController::class, 'index'])->name('master-stock.index');
