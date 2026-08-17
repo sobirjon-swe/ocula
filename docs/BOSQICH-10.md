@@ -233,4 +233,85 @@ GET    /branch-plans                  POST /branch-plans
 
 ## 10c — Analitika (Analytics)
 
-*(keyingi commit)*
+**Holat: bajarilgan va yashil.**
+
+### Hajm
+
+**Kiradi:** yo'qotilgan savdo yozuvi (`lost_sales`, 7.9), ABC tahlil
+(6.11), o'lik zaxira hisobot (90+ kun sotilmagan), kassa hisoboti
+(7.8-A), savdo va foyda hisoboti (7.8-B), xodimlar ko'rsatkichi,
+filiallar reytingi (reja % bo'yicha, 7.18), bosh ekran (dashboard),
+CSV eksport.
+
+**Kirmaydi:** `openspout/openspout` paketi — tarmoq siyosati bu
+konteynerda GitHub zipball orqali paket o'rnatishni cheklaydi (avvalgi
+bosqichlarda `phpstan`/`larastan` bilan ham xuddi shu muammo
+uchragan). Shu sabab eksport **`openspout` siz**, PHP'ning o'zi
+(`fputcsv` + `StreamedResponse`) bilan qurildi — funksional jihatdan
+CSV eksport talabini to'liq qondiradi, faqat XLSX formatida emas.
+`openspout` keyinroq, tarmoq imkon bergan muhitda qo'shilishi mumkin
+— bu **qarz emas**, muqobil (va kamroq qaram) yechim.
+
+### Migratsiya
+
+| Fayl | Jadval |
+|---|---|
+| `0001_01_01_000530_create_lost_sales_table.php` | `lost_sales` |
+
+### Yo'qotilgan savdo (7.9)
+
+`LostSale` — Warehouse moduli (`warehouse.lost_sale.*` ruxsati shu
+yerda allaqachon urug'langan). `variant_id` **yoki** `search_term`
+majburiy (baza `CHECK`) — katalogda umuman yo'q tovar ham qayd
+etiladi (3.8). Qo'lda yoziladi: `POST /lost-sales`
+(`warehouse.lost_sale.create`, sotuvchi/ombor/filial menejeri).
+
+### Hisobotlar — Analytics moduli
+
+Har biri o'z ruxsati bilan, `analytics.dashboard.view` bundan
+mustasno — u hammada bor:
+
+| Hisobot | Manba | Ruxsat |
+|---|---|---|
+| Bosh ekran | Bajarilmagan buyurtmalar majburiyati + joriy oy reja % | `analytics.dashboard.view` |
+| Kassa (7.8-A) | `cash_movements`, toifa bo'yicha ishorali yig'indi | `analytics.cash_report.view` |
+| Savdo va foyda (7.8-B) | `orders.revenue_recognized_at` + `cost_total` | `analytics.profit_report.view` |
+| ABC tahlil | `order_items` → `product_variants`, daromad bo'yicha kumulyativ % | `analytics.stock_report.view` |
+| O'lik zaxira | `stock_balances` (qty>0) minus so'nggi `sale` harakati 90+ kun oldin | `analytics.stock_report.view` |
+| Yo'qotilgan savdo hisobot | `lost_sales` | `warehouse.lost_sale.view_any` |
+| Xodimlar ko'rsatkichi | `bonus_entries` + `orders.created_by` | `analytics.staff_report.view` |
+| Filiallar reytingi | `branch_plans.target_amount` vs bajarilgan, **% bo'yicha** (7.18, mutlaq summa emas) | `analytics.branch_rating.view` |
+
+Filial cheklovi: `canAccessAllBranches()` bo'lmagan xodim faqat o'z
+filiali(lari) bo'yicha ko'radi — `branch_id` parametri berilsa ham,
+begona filialga cheklanadi.
+
+### Eksport (`analytics.export`)
+
+`?format=csv` — har bir hisobot endpointida. `StreamedResponse` +
+`fputcsv`, xotiraga butun faylni yig'ib olmaydi.
+
+### API (yangi)
+
+```
+POST   /lost-sales                    GET  /lost-sales
+GET    /analytics/dashboard
+GET    /analytics/cash-report
+GET    /analytics/profit-report
+GET    /analytics/abc-analysis
+GET    /analytics/dead-stock
+GET    /analytics/lost-sale-report
+GET    /analytics/staff-report
+GET    /analytics/branch-rating
+```
+
+### Testlar
+
+| Fayl | Kafolat |
+|---|---|
+| `Feature/Warehouse/LostSaleApiTest.php` | `variant_id` yoki `search_term` majburiy; sotuvchi yoza oladi |
+| `Feature/Analytics/AbcAnalysisTest.php` | Daromad bo'yicha kamayish tartibida, kumulyativ % dan A/B/C to'g'ri chiqadi |
+| `Feature/Analytics/DeadStockTest.php` | 90+ kun sotilmagan (yoki hech sotilmagan) qoldiq topiladi, yaqinda sotilgan chiqmaydi |
+| `Feature/Analytics/CashProfitReportTest.php` | Kassa va foyda hisoboti mos raqam beradi; `outstanding` majburiyat to'g'ri hisoblanadi |
+| `Feature/Analytics/BranchRankingTest.php` | Reyting **% bo'yicha**, mutlaq summa bo'yicha emas |
+| `Feature/Analytics/AnalyticsPermissionTest.php` | Har bir hisobot o'z ruxsati bilan cheklangan; filial cheklovi ishlaydi |
