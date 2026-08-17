@@ -22,16 +22,21 @@ final class TelegramClient
     ) {}
 
     /**
+     * @param  array<string, mixed>|null  $replyMarkup  Masalan, inline tugmalar
+     *                                                  (BOSQICH-8.md §4): `['inline_keyboard' => [[...]]]`.
      * @return array<string, mixed> Telegram API javobi (`result` kaliti)
      */
-    public function sendMessage(int $chatId, string $text): array
+    public function sendMessage(int $chatId, string $text, ?array $replyMarkup = null): array
     {
+        $payload = ['chat_id' => $chatId, 'text' => $text];
+
+        if ($replyMarkup !== null) {
+            $payload['reply_markup'] = $replyMarkup;
+        }
+
         $response = Http::baseUrl($this->apiUrl())
             ->asJson()
-            ->post('sendMessage', [
-                'chat_id' => $chatId,
-                'text' => $text,
-            ]);
+            ->post('sendMessage', $payload);
 
         if (! $response->successful() || $response->json('ok') !== true) {
             throw new RuntimeException(
@@ -43,6 +48,20 @@ final class TelegramClient
         $result = $response->json('result', []);
 
         return $result;
+    }
+
+    /**
+     * Inline tugma bosilgandan keyingi "yuklanmoqda" belgisini olib
+     * tashlaydi — BOSQICH-8.md §5 #6.
+     */
+    public function answerCallbackQuery(string $callbackQueryId, ?string $text = null): void
+    {
+        Http::baseUrl($this->apiUrl())
+            ->asJson()
+            ->post('answerCallbackQuery', array_filter([
+                'callback_query_id' => $callbackQueryId,
+                'text' => $text,
+            ], static fn (mixed $value): bool => $value !== null));
     }
 
     /**

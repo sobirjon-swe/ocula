@@ -41,6 +41,9 @@ enum SettingKey: string
     /** Ko'rik eslatmasi retsept muddati tugashidan necha kun oldin — 7.11, BOSQICH-7.md §4.3. */
     case CheckupReminderDaysBefore = 'checkup_reminder_days_before';
 
+    /** Mijoz javob bermasa, shuncha soatdan keyin yopiladi — 7.4, BOSQICH-8.md §4. */
+    case DeliveryAutoConfirmAfterHours = 'delivery_auto_confirm_after_hours';
+
     /**
      * `config/optika.php` dagi standart qiymat yo'li.
      */
@@ -55,6 +58,7 @@ enum SettingKey: string
             self::DebtDoubtfulAfterDays => 'debts.doubtful_after_days',
             self::DeliveryGpsToleranceMeters => 'delivery.gps_tolerance_meters',
             self::CheckupReminderDaysBefore => 'telegram.checkup_reminder_days_before',
+            self::DeliveryAutoConfirmAfterHours => 'delivery.auto_confirm_after_hours',
         };
     }
 
@@ -78,6 +82,7 @@ enum SettingKey: string
             self::DebtDoubtfulAfterDays => ['integer', 'min:1', 'max:3650'],
             self::DeliveryGpsToleranceMeters => ['integer', 'min:0', 'max:100000'],
             self::CheckupReminderDaysBefore => ['integer', 'min:1', 'max:180'],
+            self::DeliveryAutoConfirmAfterHours => ['integer', 'min:1', 'max:168'],
             self::DebtReminderDays => ['array', 'max:20'],
         };
     }
