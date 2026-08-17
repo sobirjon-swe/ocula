@@ -7,6 +7,8 @@ namespace App\Modules\Warehouse\Actions\Transfer;
 use App\Modules\Core\Enums\LocationType;
 use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
+use App\Modules\Finance\Actions\Expense\CreateExpense;
+use App\Modules\Finance\Models\ExpenseCategory;
 use App\Modules\Warehouse\Enums\DeliveryMethod;
 use App\Modules\Warehouse\Enums\MovementType;
 use App\Modules\Warehouse\Enums\TransferStatus;
@@ -18,7 +20,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Transferni jo'natish — PROJECT.md 7.10, ANALIZ 3.2, 3.10.
+ * Transferni jo'natish — PROJECT.md 7.10, ANALIZ 3.2, 3.10, BOSQICH-4.md
+ * §5 #4 (taksi xarajati — BOSQICH-10.md §10a da yopilgan).
  *
  * Tovar jo'natuvchi filialdan chiqadi va **yo'qolmaydi**: u
  * `transit` location'ga kiradi va qabul qilinmaguncha o'sha yerda
@@ -32,10 +35,16 @@ use Illuminate\Validation\ValidationException;
  * "Yo'lda" turgan qoldiq egasi usulga qarab boshqacha (3.2): haydovchi
  * va xodimda javobgar odam bor, taksida esa yo'q — o'shanda egasi
  * transferning o'zi bo'ladi.
+ *
+ * Taksi bilan jo'natilganda `taxi_cost` avtomatik xarajat sifatida ham
+ * yoziladi — filial sifatida **jo'natuvchi** (u taksi chaqirgan).
  */
 final class SendTransfer
 {
-    public function __construct(private readonly StockLedger $ledger) {}
+    public function __construct(
+        private readonly StockLedger $ledger,
+        private readonly CreateExpense $createExpense,
+    ) {}
 
     public function handle(
         User $sender,
@@ -78,6 +87,20 @@ final class SendTransfer
                 'sent_by' => $sender->id,
                 'sent_at' => now(),
             ]);
+
+            if ($method === DeliveryMethod::Taxi && $taxiCost instanceof Money) {
+                $this->createExpense->handle(
+                    $sender,
+                    $from->branch_id,
+                    ExpenseCategory::query()->firstOrCreate(
+                        ['code' => 'transport'],
+                        ['name' => __('warehouse::transfer.transport_expense_category')],
+                    ),
+                    $taxiCost,
+                    description: __('warehouse::transfer.taxi_expense_description', ['number' => $transfer->number]),
+                    source: $transfer,
+                );
+            }
 
             return $transfer;
         });

@@ -20,4 +20,6 @@ return [
     'transit_taxi' => 'On the road (taxi) — :number',
     'transit_person' => 'On the road — :name',
     'discrepancy_resolved' => 'Discrepancy resolved (:name): :reason',
+    'transport_expense_category' => 'Transport',
+    'taxi_expense_description' => 'Taxi — transfer :number',
 ];

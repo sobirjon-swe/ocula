@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             ServiceSeeder::class,
             SettingSeeder::class,
+            ExpenseCategorySeeder::class,
         ]);
 
         if (! app()->isProduction()) {

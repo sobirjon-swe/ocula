@@ -17,3 +17,7 @@ Schedule::command('telegram:remind-checkups')->dailyAt('08:15')->withoutOverlapp
 // Yetkazish tasdig'i — BOSQICH-8.md §4. Har soat: 24 soatlik javob
 // muddati bir kunlik buyruq bilan qo'pol hisoblanmasin.
 Schedule::command('delivery:expire-confirmations')->hourly()->withoutOverlapping();
+
+// Qarz holati — BOSQICH-10.md §10a. Qarz eslatmasidan oldin ishga
+// tushadi: 08:00 dagi eslatma kuni bo'yicha yangilangan holatga tayansin.
+Schedule::command('finance:refresh-debt-statuses')->dailyAt('07:45')->withoutOverlapping();

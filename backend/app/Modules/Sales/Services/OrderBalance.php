@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Modules\Finance\Services\DebtRegistry;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Enums\PaymentStatus;
 use App\Modules\Sales\Models\Order;
@@ -22,6 +23,8 @@ use App\Support\Money\Money;
  */
 final class OrderBalance
 {
+    public function __construct(private readonly DebtRegistry $debts) {}
+
     public function refresh(Order $order): Order
     {
         $paid = $order->paidAmount();
@@ -34,6 +37,7 @@ final class OrderBalance
         ]);
 
         $this->closeIfSettled($order);
+        $this->debts->syncForOrder($order);
 
         return $order;
     }
