@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Core\Models\User;
+use App\Modules\Sales\Models\Customer;
 
 return [
 
@@ -42,6 +43,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Mijoz kabineti — BOSQICH-9.md §3. Parolsiz, faqat Telegram
+        // `initData` orqali va Sanctum Bearer token bilan (cookie/CSRF
+        // emas — Mini App boshqa origin'dan ishlaydi).
+        'customer' => [
+            'driver' => 'sanctum',
+            'provider' => 'customers',
+        ],
     ],
 
     /*
@@ -71,6 +80,11 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        'customers' => [
+            'driver' => 'eloquent',
+            'model' => Customer::class,
+        ],
     ],
 
     /*

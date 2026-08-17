@@ -11,6 +11,7 @@ use App\Modules\Telegram\Console\SendDebtReminders;
 use App\Modules\Telegram\Console\SetTelegramWebhook;
 use App\Modules\Telegram\Listeners\AskDeliveryConfirmation;
 use App\Modules\Telegram\Listeners\NotifyCustomerOrderReady;
+use App\Modules\Telegram\Services\InitDataValidator;
 use App\Modules\Telegram\Services\TelegramClient;
 use App\Support\Providers\ModuleServiceProvider;
 use Illuminate\Support\Facades\Event;
@@ -28,6 +29,10 @@ final class TelegramServiceProvider extends ModuleServiceProvider
         $this->app->singleton(TelegramClient::class, static fn (): TelegramClient => new TelegramClient(
             config('services.telegram.bot_token'),
             (string) config('services.telegram.api_base_url'),
+        ));
+
+        $this->app->singleton(InitDataValidator::class, static fn (): InitDataValidator => new InitDataValidator(
+            config('services.telegram.bot_token'),
         ));
     }
 

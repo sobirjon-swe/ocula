@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Modules\Core\Models\User;
 use App\Support\Http\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
@@ -75,9 +76,17 @@ final class EnsureIdempotency
         $now = now();
         $ttlHours = (int) config('optika.idempotency.ttl_hours', 24);
 
+        // `user_id` faqat xodimga ishora qiladi (FK — `users`). Bu
+        // middleware `customer` guard'dagi yo'llarda ham ishlaydi
+        // (BOSQICH-9.md), `$request->user()` esa `auth:customer`
+        // muvaffaqiyatli o'tgach joriy guardni o'zgartiradi
+        // (`Auth::shouldUse()`) va bir xil chaqiruv Customer'ni
+        // qaytarib qo'yishi mumkin — shuning uchun aniq tur tekshiriladi.
+        $staff = $request->user();
+
         $claimed = DB::table('idempotency_keys')->insertOrIgnore([
             'key' => $key,
-            'user_id' => $request->user()?->getAuthIdentifier(),
+            'user_id' => $staff instanceof User ? $staff->getAuthIdentifier() : null,
             'endpoint' => $endpoint,
             'request_hash' => $hash,
             'locked_at' => $now,
