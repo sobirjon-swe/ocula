@@ -143,9 +143,55 @@ Hammasi (auth yo'lidan tashqari) `auth:customer` ostida.
 
 ---
 
-## 8. Bosqich 9 dan keyin
+## 8. Frontend — `customer/` (Telegram Mini App)
+
+> Sana: 2026-08-18. Backend §1-7 dan keyin, alohida bosqich sifatida
+> emas — Bosqich 12 (React Native) PROJECT.md'da "faqat PWA yetmay
+> qolganda" deb shartlangani uchun, avval shu PWA qurildi.
+
+Stack `admin/`ning aynan o'zi (React 19 + Vite 6 + TS strict + Zustand
++ TanStack Query + Tailwind v4), lekin mobile-first: sidebar o'rniga
+pastki tab-bar (`AppLayout.tsx`), 44px+ teginish nishonlari, `safe-area-
+inset-bottom`. Port `5174` (admin — `5173`).
+
+**Kirish:** rasmiy `telegram-web-app.js` skript tegi orqali (npm SDK
+yo'q — ortiqcha bog'liqlik). `Telegram.WebApp.initData` xom holda
+`POST /customer/auth/telegram` ga yuboriladi — client HMAC'ni o'zi
+tekshirmaydi, faqat backend (`InitDataValidator`, §3).
+
+**"Bir ekranda" tartib (PROJECT.md §10):** `HomePage.tsx` — faol
+buyurtma → retseptlarim → qarzim → tarix, alohida tablar emas, bitta
+scroll'da `<Section>` bloklari.
+
+**Yetkazishni tasdiqlash — chuqur havola:** mijozga "pending
+tasdiqlashlar" ro'yxatini beradigan endpoint yo'q (§1 "kirmaydi"),
+shuning uchun bot `t.me/bot/app?startapp=stop_123` havolasi bilan
+ochiladi → `Telegram.WebApp.initDataUnsafe.start_param` → ilova ochilishi
+bilan `/delivery/123` ga yo'naltiradi (`routes.tsx`,
+`useStartParamRedirect`), pastki navigatsiyadan tashqarida.
+
+**Retsept — "saqlab olsa bo'ladigan karta":** gradient karta +
+`navigator.share()` (Web Share API) — rasm eksport kutubxonasi
+qo'shilmadi, brauzer o'zi qila oladigan ish uchun.
+
+**i18n:** `admin/`ning haqiqiy konvensiyasi qaytarildi — hujjatlashtirilgan
+`react-i18next` (PROJECT.md §10) emas, hand-rolled `Record<Locale,
+Record<MessageKey,string>>` + `useT()`. `uz-cyrl` mijoz UI matnlari
+uchun alohida tarjima qilinmaydi — `sourceLocale()` uni `uz-latn`ga
+tenglashtiradi (admin bilan bir xil soddalashtirish; ma'lumot darajasida
+`uz-cyrl` baribir backend'dagi `Transliterator` orqali keladi).
+
+**Standalone login yo'q:** telefon+SMS OTP kanali hali yo'q (§1
+"kirmaydi", `ANALIZ.md` §16) — Mini App'dan tashqarida ochilsa,
+`auth.outsideTelegram` xabari ko'rsatiladi.
+
+---
+
+## 9. Bosqich 9 dan keyin
 
 1. Bosqich 10 — Moliya: to'liq qarz registri, `debt_balance` keshi
    endi haqiqiy manbaga ega bo'ladi.
 2. Mijozlarni birlashtirish vositasi (§5 #2 dagi qarz).
 3. Telefon + SMS OTP — agar direktor talab qilsa (`ANALIZ.md` §16).
+4. Bosqich 12 (React Native) — endi PWA (§8) mavjud; kerakligini
+   qayta ko'rib chiqish kerak (PROJECT.md: "faqat kerak bo'lsa").
