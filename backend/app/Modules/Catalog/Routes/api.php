@@ -7,6 +7,7 @@ use App\Modules\Catalog\Http\Controllers\CategoryController;
 use App\Modules\Catalog\Http\Controllers\PriceController;
 use App\Modules\Catalog\Http\Controllers\ProductController;
 use App\Modules\Catalog\Http\Controllers\ProductVariantController;
+use App\Modules\Catalog\Http\Controllers\PublicServiceController;
 use App\Modules\Catalog\Http\Controllers\ServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,11 @@ use Illuminate\Support\Facades\Route;
 | route'da `permission:` middleware takrorlanmaydi.
 |
 */
+
+// Landing sayt uchun ochiq (hisobsiz) — BOSQICH-11.md.
+Route::middleware('throttle:30,1')->prefix('public')->name('api.public.')->group(function (): void {
+    Route::get('services', [PublicServiceController::class, 'index'])->name('services');
+});
 
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
     Route::apiResource('brands', BrandController::class);
