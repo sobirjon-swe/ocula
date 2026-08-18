@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Core\Http\Controllers\AuthController;
 use App\Modules\Core\Http\Controllers\BranchController;
 use App\Modules\Core\Http\Controllers\DeviceController;
+use App\Modules\Core\Http\Controllers\PublicBranchController;
 use App\Modules\Core\Http\Controllers\SettingController;
 use App\Modules\Core\Http\Controllers\ShiftController;
 use App\Modules\Core\Http\Controllers\UserController;
@@ -20,6 +21,12 @@ use Illuminate\Support\Facades\Route;
 | shuning uchun route'da `permission:` middleware takrorlanmaydi.
 |
 */
+
+// Landing sayt uchun ochiq (hisobsiz) — BOSQICH-11.md. `throttle` —
+// bu yerda auth yo'q, spam/scraping'dan yagona himoya.
+Route::middleware('throttle:30,1')->prefix('public')->name('api.public.')->group(function (): void {
+    Route::get('branches', [PublicBranchController::class, 'index'])->name('branches');
+});
 
 Route::prefix('auth')->name('api.auth.')->group(function (): void {
     Route::post('login', [AuthController::class, 'login'])->name('login');

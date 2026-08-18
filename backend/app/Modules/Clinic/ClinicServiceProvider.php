@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Clinic;
 
+use App\Modules\Clinic\Models\AppointmentRequest;
 use App\Modules\Clinic\Models\Prescription;
 use App\Modules\Clinic\Models\Visit;
+use App\Modules\Clinic\Policies\AppointmentRequestPolicy;
 use App\Modules\Clinic\Policies\PrescriptionPolicy;
 use App\Modules\Clinic\Policies\VisitPolicy;
 use App\Support\Providers\ModuleServiceProvider;
@@ -31,6 +33,7 @@ final class ClinicServiceProvider extends ModuleServiceProvider
         return [
             Visit::class => VisitPolicy::class,
             Prescription::class => PrescriptionPolicy::class,
+            AppointmentRequest::class => AppointmentRequestPolicy::class,
         ];
     }
 }

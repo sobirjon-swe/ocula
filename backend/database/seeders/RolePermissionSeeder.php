@@ -83,6 +83,7 @@ class RolePermissionSeeder extends Seeder
             'clinic.prescription.create', 'clinic.prescription.update',
             'clinic.prescription.view', 'clinic.prescription.view_history',
             'clinic.ticket.transfer_branch',
+            'clinic.appointment_request.view_any', 'clinic.appointment_request.manage',
         ],
         'workshop' => [
             'workshop.work_order.view_any', 'workshop.work_order.assign',
@@ -232,6 +233,7 @@ class RolePermissionSeeder extends Seeder
             'clinic.visit.finish', 'clinic.visit.cancel',
             'clinic.prescription.view', 'clinic.prescription.view_history',
             'clinic.ticket.transfer_branch',
+            'clinic.appointment_request.view_any', 'clinic.appointment_request.manage',
             'workshop.work_order.view_any', 'workshop.work_order.assign',
             'delivery.trip.view_any', 'delivery.trip.create', 'delivery.trip.start',
             'delivery.trip.finish', 'delivery.balance.view', 'delivery.collection.receive',
@@ -288,6 +290,7 @@ class RolePermissionSeeder extends Seeder
             'clinic.visit.finish', 'clinic.visit.cancel',
             'clinic.prescription.create', 'clinic.prescription.update',
             'clinic.prescription.view', 'clinic.prescription.view_history',
+            'clinic.appointment_request.view_any', 'clinic.appointment_request.manage',
             'payroll.bonus.view_own',
             'analytics.dashboard.view',
         ];

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Modules\Clinic\Http\Controllers\AppointmentRequestController;
 use App\Modules\Clinic\Http\Controllers\PrescriptionController;
+use App\Modules\Clinic\Http\Controllers\PublicAppointmentController;
 use App\Modules\Clinic\Http\Controllers\VisitController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,7 +23,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// Landing sayt uchun ochiq (hisobsiz) — BOSQICH-11.md.
+Route::middleware('throttle:10,1')->prefix('public')->name('api.public.')->group(function (): void {
+    Route::post('appointments', [PublicAppointmentController::class, 'store'])->name('appointments.store');
+});
+
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
+    Route::get('appointment-requests', [AppointmentRequestController::class, 'index'])
+        ->name('appointment_requests.index');
+    Route::put('appointment-requests/{appointmentRequest}/status', [AppointmentRequestController::class, 'updateStatus'])
+        ->name('appointment_requests.status');
+
     Route::get('visits/queue', [VisitController::class, 'queue'])->name('visits.queue');
     Route::get('visits', [VisitController::class, 'index'])->name('visits.index');
     Route::get('visits/{visit}', [VisitController::class, 'show'])->name('visits.show');
