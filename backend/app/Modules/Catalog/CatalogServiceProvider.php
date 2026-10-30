@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog;
 
+use App\Modules\Catalog\Console\ReportDuplicateProducts;
 use App\Modules\Catalog\Models\Brand;
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Price;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Models\ProductVariant;
 use App\Modules\Catalog\Models\Service;
+use App\Modules\Catalog\Observers\PendingProductObserver;
 use App\Modules\Catalog\Policies\BrandPolicy;
 use App\Modules\Catalog\Policies\CategoryPolicy;
 use App\Modules\Catalog\Policies\PricePolicy;
@@ -24,6 +26,15 @@ use App\Support\Providers\ModuleServiceProvider;
  */
 final class CatalogServiceProvider extends ModuleServiceProvider
 {
+    public function boot(): void
+    {
+        parent::boot();
+        Product::observe(PendingProductObserver::class);
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReportDuplicateProducts::class]);
+        }
+    }
+
     protected function moduleName(): string
     {
         return 'Catalog';

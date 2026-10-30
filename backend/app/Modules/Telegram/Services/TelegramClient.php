@@ -35,6 +35,7 @@ final class TelegramClient
         }
 
         $response = Http::baseUrl($this->apiUrl())
+            ->connectTimeout(5)->timeout(15)
             ->asJson()
             ->post('sendMessage', $payload);
 
@@ -57,6 +58,7 @@ final class TelegramClient
     public function answerCallbackQuery(string $callbackQueryId, ?string $text = null): void
     {
         Http::baseUrl($this->apiUrl())
+            ->connectTimeout(5)->timeout(15)
             ->asJson()
             ->post('answerCallbackQuery', array_filter([
                 'callback_query_id' => $callbackQueryId,
@@ -70,6 +72,7 @@ final class TelegramClient
     public function setWebhook(string $url, string $secretToken): void
     {
         $response = Http::baseUrl($this->apiUrl())
+            ->connectTimeout(5)->timeout(15)
             ->asJson()
             ->post('setWebhook', [
                 'url' => $url,

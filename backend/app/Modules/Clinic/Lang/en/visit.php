@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'booking_rate_limited' => 'Too many requests for this phone. Please try again in a minute.',
     'already_in_queue' => 'This customer is already in today\'s queue — open the existing visit.',
     'not_startable' => 'This visit cannot be started (status: :status).',
     'not_finishable' => 'Only an ongoing exam can be finished (status: :status).',

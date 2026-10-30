@@ -22,7 +22,8 @@ class ServiceResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->localizedName(),
+            'name_translations' => $this->getAttribute('name_translations'),
             'price' => $this->price->toString(),
             'price_formatted' => $this->price->format(),
             'duration_min' => $this->duration_min,

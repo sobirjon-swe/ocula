@@ -25,7 +25,7 @@ final class TripPolicy extends ResourcePolicy
 
     public function view(User $user, Model $model): bool
     {
-        return $user->can('delivery.trip.view_any');
+        return $user->can('delivery.trip.view_any') && $this->ownsOrDispatches($user, $model);
     }
 
     public function start(User $user, Model $model): bool

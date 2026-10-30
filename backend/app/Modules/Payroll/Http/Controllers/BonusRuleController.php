@@ -43,6 +43,7 @@ final class BonusRuleController extends ApiController
         $this->authorize('create', BonusRule::class);
 
         $rule = BonusRule::create([
+            'percent' => '0',
             ...$request->validated(),
             'created_by' => $this->currentUser($request)->id,
         ]);

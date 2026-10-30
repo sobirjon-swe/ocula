@@ -29,6 +29,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'email' => $this->email,
             'branch_id' => $this->branch_id,
+            'branch_ids' => $this->whenLoaded('branches', fn () => $this->branches->modelKeys()),
             // Direktorda `branch_id` bo'lmasligi mumkin (§4) — bog'lanish
             // yuklangan, lekin qiymati `null` bo'lgan holat oddiy hol.
             'branch' => $this->when(

@@ -59,6 +59,21 @@ final class CashRegisterTest extends TestCase
      * boshidagi pul ikki marta sanalardi.
      */
     #[Test]
+    public function a_later_cash_reversal_belongs_to_the_current_shift_and_only_happens_once(): void
+    {
+        $old = $this->openShift('0');
+        $movement = $this->register->record($this->actor, $this->branch->id, CashCategory::Sale, Money::of('100000'), $old);
+        $old->update(['status' => ShiftStatus::Closed, 'closed_at' => now()]);
+        $current = Shift::factory()->for($this->branch)->create();
+        $reversal = $this->register->reverse($this->actor, $movement, 'Incorrect entry');
+        $this->assertSame($current->id, $reversal->shift_id);
+        $this->assertSame('100000.00', $this->register->expectedCash($old->fresh())->toString());
+        $this->assertSame('-100000.00', $this->register->expectedCash($current)->toString());
+        $this->expectException(ValidationException::class);
+        $this->register->reverse($this->actor, $movement, 'Retry must not duplicate');
+    }
+
+    #[Test]
     public function the_opening_cash_is_never_counted_twice(): void
     {
         $shift = $this->openShift('200000');

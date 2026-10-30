@@ -30,6 +30,8 @@ class TripStopResource extends JsonResource
             'order_id' => $this->order_id,
             'transfer_id' => $this->transfer_id,
             'address' => $this->address,
+            'contact_name' => $this->type->value === 'customer' ? $this->customer?->name : $this->branch?->name,
+            'contact_phone' => $this->type->value === 'customer' ? $this->customer?->phone : $this->branch?->phone,
             'lat' => $this->lat,
             'lng' => $this->lng,
             'cash_to_collect' => $this->cash_to_collect->toString(),

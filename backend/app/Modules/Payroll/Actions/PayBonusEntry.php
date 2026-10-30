@@ -9,6 +9,7 @@ use App\Modules\Finance\Enums\CashCategory;
 use App\Modules\Finance\Services\CashRegister;
 use App\Modules\Payroll\Enums\BonusStatus;
 use App\Modules\Payroll\Models\BonusEntry;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,22 +24,30 @@ final class PayBonusEntry
 
     public function handle(User $payer, BonusEntry $entry, int $branchId): BonusEntry
     {
-        if (! in_array($entry->status, [BonusStatus::Accrued, BonusStatus::Approved], true)) {
-            throw ValidationException::withMessages([
-                'entry' => __('payroll::bonus.not_payable'),
-            ]);
-        }
+        return DB::transaction(function () use ($payer, $entry, $branchId): BonusEntry {
+            $entry = BonusEntry::query()->lockForUpdate()->findOrFail($entry->id);
+            if (! in_array($entry->status, [BonusStatus::Accrued, BonusStatus::Approved], true)) {
+                throw ValidationException::withMessages([
+                    'entry' => __('payroll::bonus.not_payable'),
+                ]);
+            }
 
-        $entry->update(['status' => BonusStatus::Paid->value]);
+            $net = $entry->amount->plus((string) BonusEntry::where('reverses_id', $entry->id)->sum('amount'));
+            if (! $net->isPositive()) {
+                throw ValidationException::withMessages(['entry' => __('payroll::bonus.not_payable')]);
+            }
 
-        $this->cash->record(
-            $payer,
-            $branchId,
-            CashCategory::BonusPayout,
-            $entry->amount,
-            source: $entry,
-        );
+            $entry->update(['status' => BonusStatus::Paid->value]);
 
-        return $entry;
+            $this->cash->record(
+                $payer,
+                $branchId,
+                CashCategory::BonusPayout,
+                $net,
+                source: $entry,
+            );
+
+            return $entry;
+        });
     }
 }

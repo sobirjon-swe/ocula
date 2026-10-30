@@ -27,6 +27,18 @@ class WorkOrderResource extends JsonResource
         return [
             'id' => $this->id,
             'order_id' => $this->order_id,
+            'order_number' => $this->whenLoaded('order', fn () => $this->order?->number),
+            'customer_name' => $this->whenLoaded('order', fn () => $this->order?->customer?->name),
+            'prescription' => $this->whenLoaded('order', function (): ?array {
+                $rx = $this->order?->prescription;
+
+                return $rx === null ? null : [
+                    'od' => ['sph' => $rx->od_sph, 'cyl' => $rx->od_cyl, 'axis' => $rx->od_axis, 'add' => $rx->od_add],
+                    'os' => ['sph' => $rx->os_sph, 'cyl' => $rx->os_cyl, 'axis' => $rx->os_axis, 'add' => $rx->os_add],
+                    'pd' => $rx->pd,
+                ];
+            }),
+            'frame_label' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => $item->variant?->product?->name)->filter()->implode(' · ')),
             'branch_id' => $this->branch_id,
             'master_id' => $this->master_id,
             'status' => $this->status->value,

@@ -38,7 +38,7 @@ class RolePermissionSeeder extends Seeder
             'core.device.view_any', 'core.device.register', 'core.device.revoke',
             'core.shift.view_any', 'core.shift.view_all_branches', 'core.shift.open',
             'core.shift.close', 'core.shift.approve_difference',
-            'core.settings.view', 'core.settings.update',
+            'core.settings.view', 'core.settings.update', 'core.audit.view',
         ],
         'catalog' => [
             'catalog.product.view_any', 'catalog.product.view', 'catalog.product.create',
@@ -154,7 +154,11 @@ class RolePermissionSeeder extends Seeder
 
         foreach (RoleEnum::staff() as $roleEnum) {
             $role = Role::findOrCreate($roleEnum->value, 'web');
-            $role->syncPermissions($this->permissionsFor($roleEnum));
+            $permissions = $this->permissionsFor($roleEnum);
+            if (in_array($roleEnum, [RoleEnum::BranchManager, RoleEnum::Accountant], true)) {
+                $permissions[] = 'core.audit.view';
+            }
+            $role->syncPermissions(array_unique($permissions));
         }
 
         // `customer` — alohida guard (§4). Roli Customer moduli bilan keladi.

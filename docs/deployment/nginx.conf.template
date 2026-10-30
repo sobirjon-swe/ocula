@@ -1,0 +1,78 @@
+upstream php_api { server app:9000; }
+upstream public_site { server landing:3000; }
+
+# Internal HTTP adapter for Next server-side calls. Never published to the host.
+server {
+    listen 8081;
+    server_name _;
+    client_max_body_size 12m;
+    location / {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/backend/public/index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/backend/public;
+        fastcgi_pass php_api;
+    }
+}
+
+server {
+    listen 8080;
+    server_name ${ADMIN_HOST};
+    root /srv/admin;
+    client_max_body_size 12m;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    location ~ ^/(api/v1|sanctum)(/|$) {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/backend/public/index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/backend/public;
+        fastcgi_param HTTPS on;
+        fastcgi_param SERVER_PORT 443;
+        fastcgi_pass php_api;
+    }
+    location /storage/ { alias /var/www/backend/storage/app/public/; }
+    location /assets/ { add_header Cache-Control "public, max-age=31536000, immutable"; try_files $uri =404; }
+    location / { try_files $uri $uri/ /index.html; add_header Cache-Control no-cache; }
+}
+
+server {
+    listen 8080;
+    server_name ${CUSTOMER_HOST};
+    root /srv/customer;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    location ~ ^/api/v1(/|$) {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/backend/public/index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/backend/public;
+        fastcgi_param HTTPS on;
+        fastcgi_param SERVER_PORT 443;
+        fastcgi_pass php_api;
+    }
+    location /assets/ { add_header Cache-Control "public, max-age=31536000, immutable"; try_files $uri =404; }
+    location = /sw.js { add_header Cache-Control no-cache; try_files $uri =404; }
+    location = /sw-assets.js { add_header Cache-Control no-cache; try_files $uri =404; }
+    location / { try_files $uri $uri/ /index.html; add_header Cache-Control no-cache; }
+}
+
+server {
+    listen 8080;
+    server_name ${PUBLIC_HOST};
+    client_max_body_size 2m;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    # Telegram webhook and public API are handled by the same modular API.
+    location ~ ^/api/v1(/|$) {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/backend/public/index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/backend/public;
+        fastcgi_param HTTPS on;
+        fastcgi_param SERVER_PORT 443;
+        fastcgi_pass php_api;
+    }
+    location / {
+        proxy_pass http://public_site;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}

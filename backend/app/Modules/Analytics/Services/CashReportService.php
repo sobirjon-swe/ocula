@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Analytics\Services;
 
+use App\Modules\Analytics\Support\ReportPeriod;
 use App\Modules\Analytics\Support\ScopesReportsToBranch;
 use App\Modules\Core\Models\User;
 use App\Support\Money\Money;
@@ -22,14 +23,13 @@ final class CashReportService
     use ScopesReportsToBranch;
 
     /**
-     * @return array<string, mixed>
+     * @return array{from:string, to:string, by_category:array<int, array{category:string, net:string}>, net_total:string}
      */
     public function generate(User $user, CarbonImmutable $from, CarbonImmutable $to, ?int $branchId = null): array
     {
         $branchIds = $this->resolveBranchIds($user, $branchId);
 
-        $rows = DB::table('cash_movements')
-            ->whereBetween('created_at', [$from, $to->endOfDay()])
+        $rows = ReportPeriod::apply(DB::table('cash_movements'), 'cash_movements', 'cash_movements.created_at', $from, $to)
             ->when($branchIds !== null, fn ($query) => $query->whereIn('branch_id', $branchIds))
             ->selectRaw("category, COALESCE(SUM(CASE WHEN type = 'in' THEN amount ELSE -amount END), 0) AS net")
             ->groupBy('category')

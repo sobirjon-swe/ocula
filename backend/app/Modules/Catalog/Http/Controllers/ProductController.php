@@ -6,9 +6,11 @@ namespace App\Modules\Catalog\Http\Controllers;
 
 use App\Modules\Catalog\Actions\Product\ApproveProduct;
 use App\Modules\Catalog\Actions\Product\MergeProducts;
+use App\Modules\Catalog\Actions\Product\QuickCreateProduct;
 use App\Modules\Catalog\Enums\ProductStatus;
 use App\Modules\Catalog\Http\Requests\Product\ApproveProductRequest;
 use App\Modules\Catalog\Http\Requests\Product\MergeProductRequest;
+use App\Modules\Catalog\Http\Requests\Product\QuickProductRequest;
 use App\Modules\Catalog\Http\Requests\Product\StoreProductRequest;
 use App\Modules\Catalog\Http\Requests\Product\UpdateProductRequest;
 use App\Modules\Catalog\Http\Resources\ProductResource;
@@ -103,11 +105,27 @@ final class ProductController extends ApiController
     /**
      * Sotuv paytida tez qo'shish (7.13) — savdo to'xtamasligi kerak.
      */
-    public function quickStore(StoreProductRequest $request): JsonResponse
+    public function quickStore(QuickProductRequest $request, QuickCreateProduct $create): JsonResponse
     {
         $this->authorize('quickCreate', Product::class);
 
-        return $this->create($request, ProductStatus::Pending, quick: true);
+        $input = [
+            'name' => $request->string('name')->toString(),
+            'type' => $request->string('type')->toString(),
+            'brand_id' => $request->integer('brand_id') ?: null,
+            'category_id' => $request->integer('category_id') ?: null,
+            'unit' => $request->string('unit')->toString() ?: 'pcs',
+            'sku' => $request->string('sku')->toString() ?: null,
+            'barcode' => $request->string('barcode')->toString() ?: null,
+            'price' => $request->filled('price') ? $request->string('price')->toString() : null,
+            'branch_id' => $request->integer('branch_id') ?: null,
+            'opening_quantity' => $request->integer('opening_quantity') ?: null,
+            'cost_price' => $request->filled('cost_price') ? $request->string('cost_price')->toString() : null,
+        ];
+
+        return ApiResponse::created(
+            (new ProductResource($create->handle($this->currentUser($request), $input)))->resolve($request),
+        );
     }
 
     public function show(Product $product): ProductResource

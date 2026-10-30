@@ -47,6 +47,17 @@ final class BonusRuleResolverTest extends TestCase
     }
 
     #[Test]
+    public function product_specific_rules_do_not_leak_into_other_product_types(): void
+    {
+        $general = $this->roleRule(percent: '5.00');
+        $frame = $this->roleRule(percent: '9.00');
+        $frame->update(['product_type' => 'frame']);
+        $this->assertSame($frame->id, $this->resolver->resolve($this->seller, productType: 'frame')?->id);
+        $this->assertSame($general->id, $this->resolver->resolve($this->seller, productType: 'lens')?->id);
+        $this->assertSame($general->id, $this->resolver->resolve($this->seller)?->id);
+    }
+
+    #[Test]
     public function a_personal_rule_beats_a_role_rule(): void
     {
         $this->roleRule(percent: '5.00');

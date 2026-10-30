@@ -47,7 +47,7 @@ class StockLayer extends Model
 
     protected $fillable = [
         'branch_id', 'location_id', 'variant_id', 'source_type', 'source_id',
-        'movement_id', 'unit_cost', 'quantity_in', 'quantity_remaining', 'received_at',
+        'movement_id', 'unit_cost', 'quantity_in', 'quantity_remaining', 'received_at', 'origin_purchase_id',
     ];
 
     /**

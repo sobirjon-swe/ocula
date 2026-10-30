@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Analytics\Services;
 
+use App\Modules\Analytics\Support\ReportPeriod;
 use App\Modules\Analytics\Support\ScopesReportsToBranch;
 use App\Modules\Core\Models\User;
 use App\Modules\Payroll\Enums\PlanType;
@@ -22,6 +23,8 @@ final class BranchRankingService
 {
     use ScopesReportsToBranch;
 
+    public function __construct(private readonly CashReportService $cashReport) {}
+
     /**
      * @return array<int, array<string, mixed>>
      */
@@ -35,13 +38,19 @@ final class BranchRankingService
             ->when($branchIds !== null, fn ($query) => $query->whereIn('branch_id', $branchIds))
             ->get();
 
-        $result = $plans->map(function (BranchPlan $plan) use ($period): array {
+        $result = $plans->map(function (BranchPlan $plan) use ($period, $user): array {
             $achieved = $this->achievedAmount($plan, $period);
             $percent = $plan->target_amount->isPositive()
                 ? bcdiv(bcmul($achieved->toString(), '100', 6), $plan->target_amount->toString(), 2)
                 : '0.00';
 
+            $today = CarbonImmutable::today('Asia/Tashkent');
+            $elapsed = $period < $today->format('Y-m') ? '100.00' : ($period > $today->format('Y-m') ? '0.00' : bcdiv(bcmul((string) $today->day, '100', 4), (string) $today->daysInMonth, 2));
+            $cash = $this->cashReport->generate($user, $today, $today, $plan->branch_id);
+
             return [
+                'cash_today' => $cash['net_total'],
+                'month_elapsed_pct' => $elapsed,
                 'branch_id' => $plan->branch_id,
                 'type' => $plan->type->value,
                 'target_amount' => $plan->target_amount->toString(),
@@ -50,7 +59,7 @@ final class BranchRankingService
             ];
         })->all();
 
-        usort($result, static fn (array $a, array $b): int => bccomp($b['percent'], $a['percent'], 2));
+        usort($result, static fn (array $a, array $b): int => Money::of($b['percent'])->compareTo($a['percent']));
 
         return $result;
     }
@@ -63,9 +72,9 @@ final class BranchRankingService
         $orders = Order::query()
             ->withoutGlobalScopes()
             ->where('branch_id', $plan->branch_id)
-            ->revenueRecognized()
-            ->whereBetween('revenue_recognized_at', [$from, $to])
-            ->get(['total', 'cost_total']);
+            ->revenueRecognized();
+        ReportPeriod::apply($orders->getQuery(), 'orders', 'orders.revenue_recognized_at', $from, $to);
+        $orders = $orders->get(['total', 'cost_total']);
 
         return match ($plan->type) {
             PlanType::Revenue => $orders->reduce(

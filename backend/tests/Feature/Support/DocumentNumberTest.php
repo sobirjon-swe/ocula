@@ -18,6 +18,19 @@ use Tests\TestCase;
  */
 final class DocumentNumberTest extends TestCase
 {
+    #[Test]
+    public function the_default_period_uses_the_tashkent_business_month(): void
+    {
+        $this->travelTo(new \DateTimeImmutable('2026-10-31T20:00:00+00:00'));
+        try {
+            $branch = Branch::factory()->create(['code' => 'A']);
+            $number = DB::transaction(fn (): string => DocumentNumber::next('order', $branch->id, 'A'));
+            $this->assertSame('A-2611-00001', $number);
+        } finally {
+            $this->travelBack();
+        }
+    }
+
     use RefreshDatabase;
 
     #[Test]

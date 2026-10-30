@@ -38,7 +38,7 @@ final class PrescriptionApiTest extends TestCase
         $theirs = Prescription::factory()->create(['customer_id' => Customer::factory()->create()->id]);
 
         $response = $this->getJson('/api/v1/customer/prescriptions')->assertOk();
-        $ids = collect($response->json('data'))->pluck('id');
+        $ids = $response->collect('data')->pluck('id');
 
         $this->assertTrue($ids->contains($mineA->id));
         $this->assertTrue($ids->contains($mineB->id));

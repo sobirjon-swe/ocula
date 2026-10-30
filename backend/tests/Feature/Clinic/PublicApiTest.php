@@ -33,7 +33,7 @@ final class PublicApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/public/branches')->assertOk();
 
-        $names = collect($response->json('data'))->pluck('name')->all();
+        $names = $response->collect('data')->pluck('name')->all();
         $this->assertSame(['Faol filial'], $names);
     }
 
@@ -45,7 +45,7 @@ final class PublicApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/public/services')->assertOk();
 
-        $names = collect($response->json('data'))->pluck('name')->all();
+        $names = $response->collect('data')->pluck('name')->all();
         $this->assertSame(["Ko'z tekshiruvi"], $names);
     }
 

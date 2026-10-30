@@ -35,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Money $base_amount
  * @property string $percent
  * @property Money $amount
+ * @property array<int, array{id:int, quantity:int, revenue:string, cost:string}>|null $basis_items
  * @property BonusStatus $status
  * @property int|null $reverses_id
  * @property CarbonImmutable $calculated_at
@@ -49,7 +50,7 @@ class BonusEntry extends Model
 
     protected $fillable = [
         'user_id', 'order_id', 'rule_id', 'period', 'base_amount',
-        'percent', 'amount', 'status', 'reverses_id', 'calculated_at',
+        'percent', 'amount', 'status', 'reverses_id', 'calculated_at', 'defect_id', 'basis_items', 'adjustment_kind',
     ];
 
     /**
@@ -61,6 +62,7 @@ class BonusEntry extends Model
             'base_amount' => MoneyCast::class,
             'percent' => 'decimal:2',
             'amount' => MoneyCast::class,
+            'basis_items' => 'array',
             'status' => BonusStatus::class,
             'calculated_at' => 'datetime',
             'created_at' => 'datetime',

@@ -22,7 +22,8 @@ class CategoryResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->localizedName(),
+            'name_translations' => $this->getAttribute('name_translations'),
             'parent_id' => $this->parent_id,
             'sort' => $this->sort,
             'is_active' => $this->is_active,

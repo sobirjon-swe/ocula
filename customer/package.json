@@ -14,9 +14,11 @@
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
     "clsx": "^2.1.1",
+    "i18next": "^26.5.12",
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.1.9",
     "react-router-dom": "^7.1.0",
     "tailwind-merge": "^2.6.0",
     "zustand": "^5.0.2"

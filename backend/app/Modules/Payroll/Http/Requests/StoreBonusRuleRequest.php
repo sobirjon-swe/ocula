@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Payroll\Http\Requests;
 
+use App\Modules\Catalog\Enums\ProductType;
 use App\Modules\Core\Enums\Role;
 use App\Modules\Payroll\Enums\BonusBase;
 use Illuminate\Contracts\Validation\Validator;
@@ -32,7 +33,9 @@ class StoreBonusRuleRequest extends FormRequest
             ))],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'base' => ['required', Rule::enum(BonusBase::class)],
-            'percent' => ['required', 'numeric', 'min:0', 'max:999.99'],
+            'percent' => ['required_without:rate', 'numeric', 'min:0', 'max:999.99'],
+            'rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
+            'product_type' => ['nullable', Rule::enum(ProductType::class)],
             'valid_from' => ['required', 'date'],
             'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
         ];

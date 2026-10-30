@@ -1,4 +1,5 @@
 import type { ListParams } from './types'
+import { toCyrillic } from '@/lib/i18n/transliterate'
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api/v1'
 
@@ -34,6 +35,11 @@ type Context = {
   onUnauthenticated: () => void
 }
 
+function localError(kind:'network'|'session'|'request'):string {
+ const source:Record<string,Record<string,string>>={network:{'uz-latn':"Serverga ulanib bo'lmadi. Internetni tekshiring va qayta urinib ko'ring.",ru:'Нет связи с сервером. Проверьте подключение и повторите попытку.',en:'Could not connect. Check your connection and try again.'},session:{'uz-latn':"Sessiya tugadi. Ilovani qayta oching.",ru:'Сессия истекла. Откройте приложение заново.',en:'Your session expired. Reopen the app.'},request:{'uz-latn':"So'rov bajarilmadi. Qayta urinib ko'ring.",ru:'Не удалось выполнить запрос. Повторите попытку.',en:'Could not complete the request. Please try again.'}}
+ const locale=context.locale();const text=source[kind][locale==='uz-cyrl'?'uz-latn':locale]??source[kind].en
+ return locale==='uz-cyrl'?toCyrillic(text):text
+}
 let context: Context = {
   token: () => null,
   locale: () => 'uz-latn',
@@ -91,25 +97,34 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     headers['Idempotency-Key'] = options.idempotencyKey
   }
 
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  const timeout = window.setTimeout(abort, 20000)
+  options.signal?.addEventListener('abort', abort, { once: true })
+  if (options.signal?.aborted) controller.abort()
   let response: Response
 
   try {
     response = await fetch(`${BASE_URL}${path}${buildQuery(options.params)}`, {
       method,
+      cache: 'no-store',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: options.signal,
+      signal: controller.signal,
     })
   } catch {
     // Tarmoq uzildi — mobil internetda bu odatiy hol, xabar shunga yarasha.
-    throw new ApiError(0, "Serverga ulanib bo'lmadi. Internetni tekshiring.", {})
+    throw new ApiError(0, localError('network'), {})
+  } finally {
+    window.clearTimeout(timeout)
+    options.signal?.removeEventListener('abort', abort)
   }
 
   if (response.status === 401) {
     if (options.skipAuthRedirect !== true) {
       context.onUnauthenticated()
     }
-    throw new ApiError(401, 'Sessiya tugadi. Ilovani qayta oching.', {})
+    throw new ApiError(401, localError('session'), {})
   }
 
   if (response.status === 204) {
@@ -121,7 +136,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   if (!response.ok) {
     const body = (payload ?? {}) as { message?: string; errors?: Record<string, string[]> }
 
-    throw new ApiError(response.status, body.message ?? `So'rov bajarilmadi (${response.status}).`, body.errors ?? {})
+    throw new ApiError(response.status, body.message ?? localError('request'), body.errors ?? {})
   }
 
   return payload as T

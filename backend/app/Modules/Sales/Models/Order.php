@@ -49,6 +49,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property Money $total
  * @property Money $paid
  * @property Money $debt
+ * @property string|null $debt_approved_amount
  * @property Money $cost_total
  * @property CarbonImmutable|null $due_date
  * @property OrderDeliveryType $delivery_type
@@ -72,6 +73,7 @@ class Order extends Model
         'total', 'paid', 'debt', 'cost_total', 'due_date', 'delivery_type',
         'status_changed_at', 'revenue_recognized_at', 'delivered_at',
         'abandoned_at', 'cancelled_at', 'discount_approved_by', 'created_by',
+        'debt_approved_by', 'debt_approved_at', 'debt_approval_reason', 'debt_approved_amount',
     ];
 
     /**
@@ -109,6 +111,7 @@ class Order extends Model
             'total' => MoneyCast::class,
             'paid' => MoneyCast::class,
             'debt' => MoneyCast::class,
+            'debt_approved_amount' => 'decimal:2',
             'cost_total' => MoneyCast::class,
             'due_date' => 'date',
             'status_changed_at' => 'datetime',
@@ -201,6 +204,13 @@ class Order extends Model
     public function paidAmount(): Money
     {
         return Money::of((string) $this->payments()->sum('amount'));
+    }
+
+    public function payableTotal(): Money
+    {
+        $net = $this->total->minus(Money::of((string) $this->returns()->sum('amount')));
+
+        return $net->isNegative() ? Money::zero() : $net;
     }
 
     /**

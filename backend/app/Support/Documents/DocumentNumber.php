@@ -44,7 +44,7 @@ final class DocumentNumber
             );
         }
 
-        $moment = $at ?? now();
+        $moment = $at ?? now('Asia/Tashkent');
         $period = $moment->format('ym');
 
         $sequence = self::lockRow($branchId, $type, $period);

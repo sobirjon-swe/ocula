@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'credit_customer_required' => 'Qarzga sotish uchun mijozni tanlash kerak.',
+    'credit_approval_required' => 'Mijoz qarzi xodim limitidan oshdi — direktor tasdigʻi kerak.',
+    'credit_approval_not_deliverable' => 'Qarz faqat topshirilmagan buyurtma uchun tasdiqlanadi.',
     'no_items' => "Chekda birorta satr yo'q — avval tovar yoki xizmat qo'shing.",
     'no_price' => "Bu tovarga narx qo'yilmagan (variant :id). Avval narxni kiriting.",
     'discount_exceeds_line' => "Chegirma satr summasidan katta bo'la olmaydi.",

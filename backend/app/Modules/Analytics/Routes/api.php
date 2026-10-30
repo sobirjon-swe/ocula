@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\Analytics\Http\Controllers\AnalyticsController;
+use App\Modules\Analytics\Http\Controllers\OperationalReportController;
+use App\Modules\Analytics\Http\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
+    Route::get('analytics/exports/{report}', ReportExportController::class);
+    Route::get('analytics/{report}', OperationalReportController::class)
+        ->whereIn('report', ['debt-aging', 'turnover', 'abandoned-orders', 'transport-costs', 'supplier-balances']);
     Route::get('analytics/dashboard', [AnalyticsController::class, 'dashboard'])
         ->name('analytics.dashboard');
     Route::get('analytics/cash-report', [AnalyticsController::class, 'cashReport'])

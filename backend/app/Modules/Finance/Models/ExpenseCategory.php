@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Models;
 
+use App\Support\Concerns\HasLocalizedName;
 use Database\Factories\ExpenseCategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,9 +21,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ExpenseCategory extends Model
 {
     /** @use HasFactory<ExpenseCategoryFactory> */
-    use HasFactory;
+    use HasFactory, HasLocalizedName;
 
-    protected $fillable = ['name', 'code', 'is_active'];
+    protected $fillable = ['name', 'name_translations', 'code', 'is_active'];
 
     /**
      * @var array<string, mixed>
@@ -37,6 +38,7 @@ class ExpenseCategory extends Model
     protected function casts(): array
     {
         return [
+            'name_translations' => 'array',
             'is_active' => 'boolean',
         ];
     }

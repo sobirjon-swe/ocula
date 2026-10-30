@@ -9,7 +9,7 @@ import { ApiError } from '@/lib/api/client'
 import './index.css'
 // Sessiya moduli API klientini sozlaydi — birinchi so'rovdan oldin
 // yuklanishi shart.
-import '@/lib/session'
+import { useSession } from '@/lib/session'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +29,18 @@ const queryClient = new QueryClient({
   },
 })
 
+// Remove all private responses whenever the authenticated identity changes.
+useSession.subscribe((next, previous) => {
+  if (next.token !== previous.token) {
+    void queryClient.cancelQueries()
+    queryClient.clear()
+  }
+  document.documentElement.lang = next.locale
+})
+document.documentElement.lang = useSession.getState().locale
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.register('/sw.js').catch(() => {})
+}
 const container = document.getElementById('root')
 
 if (container === null) {

@@ -88,7 +88,7 @@ final class AnalyticsPermissionTest extends TestCase
         $this->actingAs($manager, 'sanctum');
         $response = $this->getJson('/api/v1/analytics/branch-rating')->assertOk();
 
-        $branchIds = collect($response->json('data'))->pluck('branch_id')->all();
+        $branchIds = $response->collect('data')->pluck('branch_id')->all();
         $this->assertSame([$this->branchA->id], $branchIds);
     }
 }

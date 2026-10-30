@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
             ExpenseCategorySeeder::class,
         ]);
 
-        if (! app()->isProduction()) {
+        if (app()->environment(['local', 'testing'])) {
             $this->call(DemoUserSeeder::class);
         }
     }

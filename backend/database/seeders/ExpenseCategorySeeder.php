@@ -29,6 +29,15 @@ class ExpenseCategorySeeder extends Seeder
         ];
 
         foreach ($categories as $category) {
+            $category['name_translations'] = [
+                'uz-latn' => $category['name'],
+                'ru' => match ($category['code']) {
+                    'transport' => 'Транспорт', 'rent' => 'Аренда', 'utilities' => 'Коммунальные услуги', 'salary' => 'Зарплата', 'marketing' => 'Маркетинг', 'equipment' => 'Оборудование', 'supplies' => 'Хозяйственные товары', default => 'Другое'
+                },
+                'en' => match ($category['code']) {
+                    'transport' => 'Transport', 'rent' => 'Rent', 'utilities' => 'Utilities', 'salary' => 'Salary', 'marketing' => 'Marketing', 'equipment' => 'Equipment', 'supplies' => 'Supplies', default => 'Other'
+                },
+            ];
             ExpenseCategory::query()->firstOrCreate(['code' => $category['code']], $category);
         }
     }

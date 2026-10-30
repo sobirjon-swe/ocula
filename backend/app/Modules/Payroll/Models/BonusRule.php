@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $branch_id
  * @property BonusBase $base
  * @property string $percent
+ * @property string|null $rate
+ * @property string|null $product_type
  * @property CarbonImmutable $valid_from
  * @property CarbonImmutable|null $valid_to
  * @property int $created_by
@@ -38,7 +40,7 @@ class BonusRule extends Model
 
     protected $fillable = [
         'user_id', 'role', 'branch_id', 'base', 'percent',
-        'valid_from', 'valid_to', 'created_by',
+        'valid_from', 'valid_to', 'created_by', 'rate', 'product_type',
     ];
 
     /**
@@ -49,6 +51,7 @@ class BonusRule extends Model
         return [
             'base' => BonusBase::class,
             'percent' => 'decimal:2',
+            'rate' => 'decimal:2',
             'valid_from' => 'date',
             'valid_to' => 'date',
         ];

@@ -57,6 +57,7 @@ final class CreateOrder
         OrderDeliveryType $deliveryType = OrderDeliveryType::Pickup,
         ?string $dueDate = null,
         ?int $prescriptionId = null,
+        bool $deferDelivery = false,
     ): Order {
         if ($items === []) {
             throw ValidationException::withMessages([
@@ -65,7 +66,7 @@ final class CreateOrder
         }
 
         return DB::transaction(function () use (
-            $author, $branch, $type, $items, $customerId, $orderDiscount, $deliveryType, $dueDate, $prescriptionId
+            $author, $branch, $type, $items, $customerId, $orderDiscount, $deliveryType, $dueDate, $prescriptionId, $deferDelivery
         ): Order {
             $order = Order::create([
                 'number' => DocumentNumber::next('order', $branch->id, $branch->code),
@@ -101,7 +102,7 @@ final class CreateOrder
             // Topshirish **shu tranzaksiya ichida**: qoldiq yetmasa
             // chek ham qolmasligi kerak, aks holda ombordan chiqmagan
             // tovar uchun ochilgan hujjat osilib qolardi.
-            return $type->deliversImmediately()
+            return $type->deliversImmediately() && ! $deferDelivery
                 ? $this->deliver->handle($author, $order)
                 : $order;
         });
@@ -195,7 +196,7 @@ final class CreateOrder
         }
 
         $net = $subtotal->minus($discount);
-        $total = $net->roundToStep();
+        $total = $net->roundToStep((int) Setting::valueFor(SettingKey::MoneyRoundingStep));
 
         $order->update([
             'subtotal' => $subtotal->toString(),

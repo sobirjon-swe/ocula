@@ -32,6 +32,15 @@ class ServiceSeeder extends Seeder
             Service::query()->firstOrCreate(
                 ['name' => $service['name']],
                 [
+                    'name_translations' => [
+                        'uz-latn' => $service['name'],
+                        'ru' => match ($service['name']) {
+                            "Shifokor ko'rigi" => 'Осмотр врача', "Linza o'rnatish" => 'Установка линз', "Ko'zoynak ta'miri" => 'Ремонт очков', default => 'Регулировка'
+                        },
+                        'en' => match ($service['name']) {
+                            "Shifokor ko'rigi" => 'Eye examination', "Linza o'rnatish" => 'Lens fitting', "Ko'zoynak ta'miri" => 'Glasses repair', default => 'Adjustment'
+                        },
+                    ],
                     'price' => $service['price'],
                     'type' => $service['type'],
                     'duration_min' => $service['duration'],

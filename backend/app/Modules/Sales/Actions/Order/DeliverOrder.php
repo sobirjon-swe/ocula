@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Actions\Order;
 
 use App\Modules\Core\Models\Location;
+use App\Modules\Core\Models\Shift;
 use App\Modules\Core\Models\User;
 use App\Modules\Sales\Enums\OrderStatus;
-use App\Modules\Sales\Enums\PaymentStatus;
 use App\Modules\Sales\Models\Order;
 use App\Modules\Sales\Models\OrderItem;
+use App\Modules\Sales\Services\CreditApproval;
+use App\Modules\Sales\Services\OrderBalance;
 use App\Modules\Warehouse\Enums\MovementType;
 use App\Modules\Warehouse\Services\StockLedger;
 use App\Support\Money\Money;
@@ -31,7 +33,7 @@ use Illuminate\Validation\ValidationException;
  */
 final class DeliverOrder
 {
-    public function __construct(private readonly StockLedger $ledger) {}
+    public function __construct(private readonly StockLedger $ledger, private readonly OrderBalance $balance) {}
 
     public function handle(User $author, Order $order): Order
     {
@@ -42,6 +44,11 @@ final class DeliverOrder
         }
 
         return DB::transaction(function () use ($author, $order): Order {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if (! $order->status->canBeDelivered()) {
+                throw ValidationException::withMessages(['status' => __('sales::order.not_deliverable', ['status' => $order->status->value])]);
+            }
+            app(CreditApproval::class)->assertAllowed($author, $order);
             $location = $this->warehouseOf($order);
 
             $cost = Money::zero();
@@ -53,6 +60,9 @@ final class DeliverOrder
             $now = now();
 
             $order->update([
+                // Revenue follows the handover shift; advance payments retain
+                // their own immutable collection-shift attribution.
+                'shift_id' => Shift::withoutGlobalScopes()->where('branch_id', $order->branch_id)->active()->latest('opened_at')->value('id'),
                 'status' => OrderStatus::Delivered,
                 'status_changed_at' => $now,
                 'delivered_at' => $now,
@@ -62,11 +72,7 @@ final class DeliverOrder
 
             // To'lov allaqachon tugagan bo'lsa (avans bilan kelgan
             // buyurtma), topshirish bilan birga yopiladi.
-            if ($order->payment_status === PaymentStatus::Paid) {
-                $order->update(['status' => OrderStatus::Closed, 'status_changed_at' => $now]);
-            }
-
-            return $order;
+            return $this->balance->refresh($order);
         });
     }
 

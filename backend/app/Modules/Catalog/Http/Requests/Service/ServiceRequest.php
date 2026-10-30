@@ -21,6 +21,8 @@ class ServiceRequest extends FormRequest
         $required = $this->isMethod('POST') ? 'required' : 'sometimes';
 
         return [
+            'name_translations' => ['nullable', 'array:uz-latn,ru,en'],
+            'name_translations.*' => ['nullable', 'string', 'max:120'],
             'name' => [$required, 'string', 'max:120'],
             'price' => [$required, 'numeric', 'min:0', 'max:9999999999999'],
             'type' => [$required, Rule::enum(ServiceType::class)],

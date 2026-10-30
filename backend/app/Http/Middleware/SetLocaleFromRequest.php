@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Support\Enums\Locale;
+use App\Support\Text\Transliterator;
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -30,7 +32,23 @@ final class SetLocaleFromRequest
         app()->setLocale($locale->sourceLocale()->value);
         app()->instance('request.locale', $locale);
 
-        return $next($request);
+        $response = $next($request);
+        if ($locale->isDerived() && $response instanceof JsonResponse) {
+            $body = $response->getData(true);
+            if (is_array($body)) {
+                if (isset($body['message']) && is_string($body['message'])) {
+                    $body['message'] = Transliterator::toCyrillic($body['message']);
+                }
+                if (isset($body['errors']) && is_array($body['errors'])) {
+                    $body['errors'] = array_map(static fn ($errors) => is_array($errors)
+                        ? array_map(static fn ($text) => is_string($text) ? Transliterator::toCyrillic($text) : $text, $errors)
+                        : $errors, $body['errors']);
+                }
+                $response->setData($body);
+            }
+        }
+
+        return $response;
     }
 
     private function resolve(Request $request): Locale
@@ -49,6 +67,9 @@ final class SetLocaleFromRequest
 
         if ($user !== null) {
             $userLocale = $user->getAttribute('locale');
+            if ($userLocale instanceof Locale) {
+                return $userLocale;
+            }
 
             if (is_string($userLocale)) {
                 $candidate = Locale::tryFrom($userLocale);

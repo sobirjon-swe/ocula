@@ -11,6 +11,7 @@ use App\Modules\Catalog\Models\ProductVariant;
 use App\Modules\Core\Enums\Role;
 use App\Modules\Core\Models\Branch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\ActsAsEmployee;
 use Tests\TestCase;
@@ -38,7 +39,7 @@ final class ProductApiTest extends TestCase
     {
         $seller = $this->actingAsEmployee(Role::Seller, Branch::factory()->create());
 
-        $this->postJson('/api/v1/products/quick', [
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/products/quick', [
             'type' => ProductType::Frame->value,
             'name' => 'Ray Ban 3025 qora',
         ])->assertCreated()
@@ -72,7 +73,7 @@ final class ProductApiTest extends TestCase
     {
         $this->actingAsEmployee(Role::Seller, Branch::factory()->create());
 
-        $this->postJson('/api/v1/products/quick', [
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/products/quick', [
             'type' => ProductType::Frame->value,
             'name' => 'Ray Ban',
             'status' => ProductStatus::Approved->value,

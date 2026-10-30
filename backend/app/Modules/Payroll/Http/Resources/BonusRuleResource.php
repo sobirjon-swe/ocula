@@ -25,6 +25,8 @@ class BonusRuleResource extends JsonResource
             'branch_id' => $this->branch_id,
             'base' => $this->base->value,
             'percent' => (string) $this->percent,
+            'rate' => $this->rate,
+            'product_type' => $this->product_type,
             'valid_from' => $this->valid_from->toDateString(),
             'valid_to' => $this->valid_to?->toDateString(),
             'created_by' => $this->created_by,

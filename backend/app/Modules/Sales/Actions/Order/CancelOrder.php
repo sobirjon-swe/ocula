@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Actions\Order;
 
+use App\Modules\Finance\Services\DebtRegistry;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Models\Order;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -27,26 +29,31 @@ final class CancelOrder
 {
     public function handle(Order $order): Order
     {
-        if (! $order->status->canBeCancelled()) {
-            throw ValidationException::withMessages([
-                'status' => __('sales::order.not_cancellable', ['status' => $order->status->value]),
+        return DB::transaction(function () use ($order): Order {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if (! $order->status->canBeCancelled()) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order.not_cancellable', ['status' => $order->status->value]),
+                ]);
+            }
+
+            if ($order->paidAmount()->isPositive()) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order.cancel_with_payment'),
+                ]);
+            }
+
+            $now = now();
+
+            $order->update([
+                'status' => OrderStatus::Cancelled,
+                'status_changed_at' => $now,
+                'cancelled_at' => $now,
+                'debt' => '0.00',
             ]);
-        }
+            app(DebtRegistry::class)->syncForOrder($order);
 
-        if ($order->paidAmount()->isPositive()) {
-            throw ValidationException::withMessages([
-                'status' => __('sales::order.cancel_with_payment'),
-            ]);
-        }
-
-        $now = now();
-
-        $order->update([
-            'status' => OrderStatus::Cancelled,
-            'status_changed_at' => $now,
-            'cancelled_at' => $now,
-        ]);
-
-        return $order;
+            return $order;
+        });
     }
 }

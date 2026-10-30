@@ -46,9 +46,10 @@ export const useSession = create<SessionState>()(
     }),
     {
       name: 'optika.customer.session',
+      version: 1,
+      migrate: (stored) => { const value = stored as {token?:string;locale?:Locale}; return { token:value.token??null, customer:null, locale:value.locale??'uz-latn' } },
       partialize: (state) => ({
         token: state.token,
-        customer: state.customer,
         locale: state.locale,
       }),
     },

@@ -37,7 +37,8 @@ final class TripController extends ApiController
     {
         $this->authorize('viewAny', Trip::class);
 
-        $trips = QueryBuilder::for(Trip::class)
+        $actor = $this->currentUser($request);
+        $trips = QueryBuilder::for(Trip::query()->when(! $actor->can('delivery.trip.create'), fn ($q) => $q->where('driver_id', $actor->id)))
             ->allowedFilters(
                 AllowedFilter::exact('driver_id'),
                 AllowedFilter::exact('status'),
@@ -45,7 +46,7 @@ final class TripController extends ApiController
             )
             ->allowedSorts('date', 'created_at')
             ->defaultSort('-date')
-            ->with('stops')
+            ->with(['stops.customer', 'stops.branch'])
             ->paginate($this->perPage($request))
             ->withQueryString();
 
@@ -56,7 +57,7 @@ final class TripController extends ApiController
     {
         $this->authorize('view', $trip);
 
-        return new TripResource($trip->load('stops'));
+        return new TripResource($trip->load(['stops.customer', 'stops.branch']));
     }
 
     public function store(StoreTripRequest $request, CreateTrip $action): JsonResponse

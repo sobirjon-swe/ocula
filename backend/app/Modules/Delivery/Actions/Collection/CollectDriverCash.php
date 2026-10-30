@@ -53,6 +53,10 @@ final class CollectDriverCash
         }
 
         return DB::transaction(function () use ($receiver, $driver, $branchId, $amount, $shiftId, $note): CashCollection {
+            User::query()->whereKey($driver->id)->lockForUpdate()->firstOrFail();
+            if ($amount->greaterThan($this->ledger->balanceOf($driver->id))) {
+                throw ValidationException::withMessages(['amount' => __('delivery::collection.exceeds_balance', ['balance' => $this->ledger->balanceOf($driver->id)->format()])]);
+            }
             $collection = CashCollection::create([
                 'driver_id' => $driver->id,
                 'branch_id' => $branchId,

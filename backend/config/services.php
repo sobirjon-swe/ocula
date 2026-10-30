@@ -36,7 +36,15 @@ return [
     ],
 
     // Bosqich 7 — BOSQICH-7.md.
+    'sms' => [
+        'enabled' => env('SMS_ENABLED', false),
+        'url' => env('SMS_API_URL'),
+        'username' => env('SMS_USERNAME'),
+        'password' => env('SMS_PASSWORD'),
+        'originator' => env('SMS_ORIGINATOR', 'Optika'),
+    ],
     'telegram' => [
+        'director_chat_id' => env('TELEGRAM_DIRECTOR_CHAT_ID'),
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),

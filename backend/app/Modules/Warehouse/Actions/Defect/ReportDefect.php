@@ -6,6 +6,7 @@ namespace App\Modules\Warehouse\Actions\Defect;
 
 use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
+use App\Modules\Payroll\Services\BonusAccrual;
 use App\Modules\Warehouse\Enums\DefectReason;
 use App\Modules\Warehouse\Enums\MovementType;
 use App\Modules\Warehouse\Models\Defect;
@@ -73,7 +74,7 @@ final class ReportDefect
                 $cost = $movement->cost_total;
             }
 
-            return Defect::create([
+            $defect = Defect::create([
                 'branch_id' => $location->branch_id,
                 'location_id' => $location->id,
                 'variant_id' => $variantId,
@@ -88,6 +89,10 @@ final class ReportDefect
                 'note' => $note,
                 'reported_by' => $reporter->id,
             ]);
+            app(PrepareSupplierReturn::class)->handle($defect);
+            app(BonusAccrual::class)->deductMasterDefect($defect);
+
+            return $defect;
         });
     }
 }

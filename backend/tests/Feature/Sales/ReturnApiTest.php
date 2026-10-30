@@ -168,7 +168,7 @@ final class ReturnApiTest extends TestCase
      * tovar bor.
      */
     #[Test]
-    public function a_partial_return_leaves_the_order_open(): void
+    public function a_partial_return_keeps_the_remaining_goods_fully_paid(): void
     {
         $this->actingAsEmployee(Role::Seller, $this->branch);
         [$orderId, $itemId] = $this->sellAndPay();
@@ -181,7 +181,8 @@ final class ReturnApiTest extends TestCase
 
         $order = Order::findOrFail($orderId);
         $this->assertSame(OrderStatus::Closed, $order->status);
-        $this->assertSame(PaymentStatus::Partial, $order->payment_status);
+        $this->assertSame(PaymentStatus::Paid, $order->payment_status);
+        $this->assertSame('0.00', $order->debt->toString());
     }
 
     /**

@@ -1,3 +1,5 @@
+import { CheckInPage } from '@/features/check-in/CheckInPage'
+import { ConnectionStatus } from '@/components/layout/ConnectionStatus'
 import { useEffect } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 
@@ -22,6 +24,8 @@ function useStartParamRedirect(): void {
 
   useEffect(() => {
     const startParam = getStartParam()
+    const branchMatch = startParam !== null ? /^branch_(\d+)$/.exec(startParam) : null
+    if (branchMatch !== null) navigate('/check-in?branch=' + branchMatch[1], { replace: true })
     const match = startParam !== null ? /^stop_(\d+)$/.exec(startParam) : null
 
     if (match !== null) {
@@ -35,6 +39,8 @@ export function AppRoutes() {
   useStartParamRedirect()
 
   return (
+    <>
+      <ConnectionStatus />
     <AuthGate>
       <Routes>
         {/* Yetkazishni tasdiqlash bosh navigatsiyadan tashqarida — bot
@@ -48,11 +54,13 @@ export function AppRoutes() {
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/prescriptions" element={<PrescriptionsPage />} />
           <Route path="/debt" element={<DebtPage />} />
+          <Route path="/check-in" element={<CheckInPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthGate>
+    </>
   )
 }

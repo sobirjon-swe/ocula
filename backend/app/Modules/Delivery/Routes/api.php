@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Delivery\Http\Controllers\CashCollectionController;
+use App\Modules\Delivery\Http\Controllers\DeliveryPhotoController;
 use App\Modules\Delivery\Http\Controllers\DriverBalanceController;
 use App\Modules\Delivery\Http\Controllers\TripController;
 use App\Modules\Delivery\Http\Controllers\TripStopController;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
+    Route::get('trip-stops/{stop}/photo', DeliveryPhotoController::class);
     Route::get('trips', [TripController::class, 'index'])->name('trips.index');
     Route::get('trips/{trip}', [TripController::class, 'show'])->name('trips.show');
 

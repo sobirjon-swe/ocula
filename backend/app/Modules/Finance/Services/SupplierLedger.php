@@ -42,6 +42,15 @@ final class SupplierLedger
         return $this->write($author, $supplier, SupplierTxType::Purchase, $purchase->total, $purchase, $dueDate);
     }
 
+    public function recordReturn(User $author, Purchase $purchase, Money $amount, int $actId): SupplierTransaction
+    {
+        return SupplierTransaction::create([
+            'supplier_id' => $purchase->supplier_id, 'purchase_id' => $purchase->id,
+            'supplier_return_id' => $actId, 'type' => SupplierTxType::Return,
+            'amount' => $amount->toString(), 'reason' => 'Supplier return #'.$actId, 'created_by' => $author->id,
+        ]);
+    }
+
     /**
      * Qo'lda to'lov — `POST /supplier-transactions`. Kassadan avtomatik
      * chiqim yozadi (`CashCategory::SupplierPayment`).

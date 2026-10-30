@@ -37,9 +37,9 @@ final class ExpenseController extends ApiController
                 AllowedFilter::exact('branch_id'),
                 AllowedFilter::exact('category_id'),
             )
-            ->with('category')
             ->allowedSorts('date', 'amount', 'created_at')
             ->defaultSort('-date', '-id')
+            ->with('category')
             ->paginate($this->perPage($request))
             ->withQueryString();
 
