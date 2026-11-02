@@ -17,13 +17,17 @@
 
 ## Tasks
 
-- [ ] Inspect PR/dev job results and failed logs; reproduce and fix confirmed failures, if any.
-- [ ] Add `.github/workflows/deployment-smoke.yml`, `docs/deployment/smoke.sh` and a guarded PHP ledger fixture. Build/start the existing Compose stack on Linux; verify routes, private files, FIFO and cash state.
-- [ ] Run the existing backup script, prove nonempty restore refusal, restore into another CI project, compare ledger/files and verify worker/scheduler health.
-- [ ] Run shell/YAML/PHP validation locally; push and inspect the actual Actions result; fix real container issues until green.
-- [ ] Review final changes, record evidence/remaining external work, commit and push dev.
+- [x] Inspect PR/dev job results and failed logs; reproduce and fix confirmed failures, if any.
+- [x] Add `.github/workflows/deployment-smoke.yml`, `docs/deployment/smoke.sh` and a guarded PHP ledger fixture. Build/start the existing Compose stack on Linux; verify routes, private files, FIFO and cash state.
+- [x] Run the existing backup script, prove nonempty restore refusal, restore into another CI project, compare ledger/files and verify worker/scheduler health.
+- [x] Run shell/YAML/PHP validation locally; push and inspect the actual Actions result; fix real container issues until green.
+- [x] Review final changes, record evidence/remaining external work, commit and push dev.
 
 ## Ledger
 
 - Baseline dev a41af62; PR frontend jobs all green, backend still running at initial inspection. Dev frontend jobs also all green.
 - Docker CLI absent on Windows and Ubuntu WSL. Use an ephemeral GitHub-hosted Linux runner rather than installing a daemon on the user's machine.
+- PR run41384526193 and initial dev run41384645583 completed successfully; no CI defect required a code fix.
+- Linux smoke run41385239088 passed build/boot/routing/role/private-file checks and backup/restore. Matching source/target snapshots: quantity1, remaining FIFO cost300.00, cash1500.00, matching attachments. Nonempty restore was rejected.
+- Local shell syntax/YAML/PHP/Pint checks, non-CI harness refusal and a PostgreSQL fixture seed/verify passed. Fresh read-only review reported no critical/important findings.
+- Ruling: expose the existing director/SMS runtime settings and the public Yandex browser build key in deployment templates, because otherwise operators cannot configure those integrations through the supplied packaging. No credentials supplied or live provider calls made.

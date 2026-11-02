@@ -5,6 +5,8 @@ RUN npm ci
 COPY admin/src ./src
 COPY admin/public ./public
 COPY admin/index.html admin/tsconfig.json admin/vite.config.ts ./
+ARG VITE_YANDEX_MAPS_KEY=
+ENV VITE_YANDEX_MAPS_KEY=$VITE_YANDEX_MAPS_KEY
 RUN npm run build
 FROM node:22-bookworm-slim AS customer
 WORKDIR /build

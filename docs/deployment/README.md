@@ -2,7 +2,9 @@
 
 This directory packages the existing modular monolith; it does not split business modules into services. One release contains the Laravel API, employee SPA, customer PWA and Next public website. PostgreSQL 17 and Redis 7 are private Compose services. Only nginx is bound to host loopback. A host reverse proxy terminates HTTPS for three hostnames and forwards them, with the original `Host`, to `127.0.0.1:8080`.
 
-The container recipes have not been run in the Windows development environment, which has no Docker CLI. Validate them on a staging Linux host before production. The application builds, lint and behavior tests can be run independently using the root README.
+The Windows development environment has no Docker CLI. The `deployment smoke` GitHub Actions workflow on `dev` builds the actual images and checks startup/routing, Horizon/scheduler, restricted database access, private files and an isolated backup/restore with FIFO and cash fixtures. It uses disposable runner volumes and generated credentials, not a production deployment. Check its recorded result before treating a container release as verified. The application builds, lint and behavior tests can also be run independently using the root README.
+
+The [first Linux smoke run](https://github.com/sobirjon-swe/ocula/actions/runs/41385239088) passed on 2026-11-02: FIFO quantity 1/cost 300.00 and cash 1500.00 plus both attachment files matched after restore. Restore over the populated source database was refused. This verifies the recipes against disposable data; repeat the recovery drill with the actual business deployment before cutover.
 
 ## Environment separation
 
@@ -27,7 +29,9 @@ Copy the displayed key into `.env.app` in a private terminal; preserve it in you
 
 Branch pages generate QR images locally. Set optional public `TELEGRAM_MINI_APP_URL` in `.env` to the bot's Mini App link (`https://t.me/your_bot/app`) for Telegram scan-to-check-in. Otherwise Compose supplies the customer hostname as the check-in target; an installed PWA needs a valid customer credential. In other hosting setups set server-side `CUSTOMER_APP_URL` (or `NEXT_PUBLIC_CUSTOMER_URL`). QR codes contain only branch routing information. Immediate check-in joins today's doctor queue; the public booking form requests a callback for a future appointment. Both paths remain separate.
 
-No runtime secret enters a Docker build argument. Dockerfiles copy named source directories, not local `.env`, vendor, test fixtures or storage. SPA builds use same-origin `/api/v1`; the Next server calls private `web:8081`. PostgreSQL, Redis and PHP-FPM have no published ports. nginx substitutes only the three hostname variables. The web server serves only `storage/app/public`; private uploads remain accessible through authorized API flows.
+No runtime secret enters a Docker build argument. Optional `VITE_YANDEX_MAPS_KEY` is a public browser key, passed only to the employee build; restrict it to the employee hostname at Yandex and rebuild `web` after changing it. Dockerfiles copy named source directories, not local `.env`, vendor, test fixtures or storage. SPA builds use same-origin `/api/v1`; the Next server calls private `web:8081`. PostgreSQL, Redis and PHP-FPM have no published ports. nginx substitutes only the three hostname variables. The web server serves only `storage/app/public`; private uploads remain accessible through authorized API flows.
+
+The backend runtime template includes `TELEGRAM_DIRECTOR_CHAT_ID` for daily director summaries and the optional SMS fallback settings. Enable SMS only after setting the authorized HTTPS endpoint, username, password and originator in `.env.app`; rebuild is unnecessary for these runtime values, but recreate app/worker/scheduler containers so they load the new environment. Verify delivery using staging recipients first.
 
 ## First start
 
