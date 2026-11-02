@@ -42,7 +42,7 @@ Direktorga hisobot qo'lda ko'chirib beriladi.
 ## 2. TEXNOLOGIYA STEKI
 
 ### Backend
-- **Laravel 13** (PHP 8.3+)
+- **Laravel 13** (PHP 8.4+; activitylog 5 va lock-fayl talabi)
 - **PostgreSQL 16+** — asosiy baza (`pg_trgm`, `unaccent` kengaytmalari majburiy)
 - **Redis** — cache, queue, session
 - **Laravel Horizon** — queue monitoring (faqat Linux/prod; Windows dev'da `queue:work`)

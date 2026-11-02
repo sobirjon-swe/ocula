@@ -21,7 +21,7 @@ export function DeliveryConfirmPage() {
   const confirm = useConfirmDelivery(id)
   const dispute = useDisputeDelivery(id)
 
-  if (!Number.isFinite(id)) {
+  if (!Number.isSafeInteger(id) || id < 1) {
     return (
       <div className="p-4">
         <ErrorBlock error={new Error(t('delivery.error'))} />

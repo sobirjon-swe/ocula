@@ -129,7 +129,7 @@ final class DriverBalanceTest extends TestCase
 
         $this->actingAs($this->driver, 'sanctum');
         $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
-            ->postJson("/api/v1/trip-stops/{$stop->id}/deliver")
+            ->postJson("/api/v1/trip-stops/{$stop->id}/deliver", ['lat' => '41.31', 'lng' => '69.28'])
             ->assertOk();
     }
 }

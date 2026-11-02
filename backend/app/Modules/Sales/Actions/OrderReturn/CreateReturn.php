@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Actions\OrderReturn;
 
 use App\Modules\Catalog\Models\ProductVariant;
 use App\Modules\Core\Models\Location;
+use App\Modules\Core\Models\Shift;
 use App\Modules\Core\Models\User;
 use App\Modules\Finance\Enums\CashCategory;
 use App\Modules\Finance\Services\CashRegister;
@@ -86,13 +87,18 @@ final class CreateReturn
         $this->assertRefundFits($order, $refund);
 
         return DB::transaction(function () use ($author, $order, $reason, $items, $refund, $refundMethod): OrderReturn {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if (! in_array($order->status, [OrderStatus::Delivered, OrderStatus::Closed], true)) {
+                throw ValidationException::withMessages(['order' => __('sales::return.order_not_delivered')]);
+            }
+            $this->assertRefundFits($order, $refund);
             $branch = $order->branch()->firstOrFail();
 
             $return = OrderReturn::create([
                 'number' => DocumentNumber::next('return', $branch->id, $branch->code),
                 'order_id' => $order->id,
                 'branch_id' => $order->branch_id,
-                'shift_id' => $order->shift_id,
+                'shift_id' => Shift::withoutGlobalScopes()->where('branch_id', $order->branch_id)->active()->latest('opened_at')->value('id'),
                 'reason' => $reason,
                 'created_by' => $author->id,
             ]);
@@ -111,6 +117,10 @@ final class CreateReturn
                 'amount' => $amount->toString(),
                 'cost_total' => $cost->toString(),
             ]);
+
+            if ($refund !== null && $refund->greaterThan($amount)) {
+                throw ValidationException::withMessages(['refund' => __('sales::return.refund_exceeds_return')]);
+            }
 
             $this->refund($author, $order, $return, $refund, $refundMethod);
             $this->settleOrder($order);
@@ -140,17 +150,24 @@ final class CreateReturn
         }
 
         $unitCost = $item->unitCost();
-        $lineAmount = $item->unitNetPrice()->multipliedBy($quantity);
+        $netLine = $this->discountedLineTotal($order, $item);
+        $lineAmount = $quantity === $available
+            ? $netLine->minus(Money::of((string) $item->returnItems()->sum('amount')))
+            : $netLine->dividedBy($item->quantity)->multipliedBy($quantity);
         $lineCost = $unitCost->multipliedBy($quantity);
 
         $restock = ($row['restock'] ?? true) && $item->cost_source->touchesStock();
         $movementId = null;
+        $variantId = $this->canonicalVariantId($item);
 
         if ($restock) {
+            if ($variantId === null) {
+                throw new \LogicException('A stock-backed return must reference a catalog variant.');
+            }
             $movementId = $this->ledger->receive(
                 $author,
                 $this->warehouseOf($order),
-                $item->itemable_id,
+                $variantId,
                 $quantity,
                 $unitCost,
                 MovementType::Return,
@@ -160,7 +177,7 @@ final class CreateReturn
 
         $return->items()->create([
             'order_item_id' => $item->id,
-            'variant_id' => $item->itemable_type === ProductVariant::class ? $item->itemable_id : null,
+            'variant_id' => $variantId,
             'quantity' => $quantity,
             'amount' => $lineAmount->toString(),
             'cost_total' => $lineCost->toString(),
@@ -173,6 +190,24 @@ final class CreateReturn
         }
 
         return [$lineAmount, $lineCost];
+    }
+
+    private function canonicalVariantId(OrderItem $item): ?int
+    {
+        if ($item->itemable_type !== ProductVariant::class) {
+            return null;
+        }
+        $variant = ProductVariant::query()->whereKey($item->itemable_id)->lockForUpdate()->firstOrFail();
+        $seen = [];
+        while ($variant->merged_into_id !== null) {
+            if (isset($seen[$variant->id])) {
+                throw new \LogicException('A merged variant chain contains a cycle.');
+            }
+            $seen[$variant->id] = true;
+            $variant = ProductVariant::query()->whereKey($variant->merged_into_id)->lockForUpdate()->firstOrFail();
+        }
+
+        return $variant->id;
     }
 
     /**
@@ -218,6 +253,26 @@ final class CreateReturn
             : DefectReason::CustomerRequest;
     }
 
+    private function discountedLineTotal(Order $order, OrderItem $item): Money
+    {
+        $items = $order->items()->orderBy('id')->get();
+        $gross = (string) $order->items()->sum('total');
+        if (bccomp($gross, '0', 2) === 0) {
+            return Money::zero();
+        }
+        $allocated = Money::zero();
+        foreach ($items as $row) {
+            $amount = $row->id === $items->last()->id ? $order->total->minus($allocated)
+                : $order->total->multipliedBy(bcdiv($row->total->toString(), $gross, 8));
+            if ($row->id === $item->id) {
+                return $amount;
+            }
+            $allocated = $allocated->plus($amount);
+        }
+
+        return Money::zero();
+    }
+
     /**
      * Pulni qaytarish — manfiy `payment` va naqd bo'lsa kassa chiqimi.
      *
@@ -239,7 +294,7 @@ final class CreateReturn
             'order_id' => $order->id,
             'customer_id' => $order->customer_id,
             'branch_id' => $order->branch_id,
-            'shift_id' => $order->shift_id,
+            'shift_id' => $return->shift_id,
             'amount' => $refund->negated()->toString(),
             'method' => $method,
             'status' => PaymentTxStatus::Completed,
@@ -280,7 +335,8 @@ final class CreateReturn
         }
 
         $this->balance->refresh($order);
-        $this->bonuses->reverseForOrder($order);
+        $this->bonuses->reverseForOrder($order, Money::of((string) $order->returns()->sum('amount')));
+        $this->bonuses->reconcilePayment($order, in_array($order->payment_status, [PaymentStatus::Paid, PaymentStatus::Refunded], true));
     }
 
     private function assertRefundFits(Order $order, ?Money $refund): void

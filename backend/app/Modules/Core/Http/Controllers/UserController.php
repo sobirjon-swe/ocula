@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Core\Http\Controllers;
 
+use App\Modules\Core\Http\Requests\User\AssignBranchesRequest;
 use App\Modules\Core\Http\Requests\User\AssignRolesRequest;
 use App\Modules\Core\Http\Requests\User\SetDebtLimitRequest;
 use App\Modules\Core\Http\Requests\User\SetPinRequest;
@@ -58,7 +59,7 @@ final class UserController extends ApiController
                 $actor->canAccessAllBranches(),
                 fn ($query) => $query->whereIn('branch_id', $actor->accessibleBranchIds()),
             )
-            ->with(['branch', 'roles'])
+            ->with(['branch', 'roles', 'branches'])
             ->paginate($this->perPage($request))
             ->withQueryString();
 
@@ -89,7 +90,7 @@ final class UserController extends ApiController
     {
         $this->authorize('view', $user);
 
-        return new UserResource($user->load(['branch', 'roles']));
+        return new UserResource($user->load(['branch', 'roles', 'branches']));
     }
 
     public function update(UpdateUserRequest $request, User $user): UserResource
@@ -123,9 +124,24 @@ final class UserController extends ApiController
 
         /** @var array<int, string> $roles */
         $roles = $request->validated()['roles'];
+        $oldRoles = $user->getRoleNames()->all();
         $user->syncRoles($roles);
+        activity('domain')->performedOn($user)->causedBy($this->currentUser($request))->event('roles_changed')
+            ->withProperties(['old' => ['roles' => $oldRoles], 'attributes' => ['roles' => $roles], 'branch_id' => $user->branch_id])->log('User roles changed');
 
         return new UserResource($user->load(['branch', 'roles']));
+    }
+
+    public function assignBranches(AssignBranchesRequest $request, User $user): UserResource
+    {
+        $this->authorize('assignRole', $user);
+        $old = $user->branches()->pluck('branches.id')->all();
+        $ids = $request->validated('branch_ids');
+        $user->branches()->sync($ids);
+        activity('domain')->performedOn($user)->causedBy($this->currentUser($request))->event('branches_changed')
+            ->withProperties(['old' => ['branch_ids' => $old], 'attributes' => ['branch_ids' => $ids], 'branch_id' => $user->branch_id])->log('User branches changed');
+
+        return new UserResource($user->load(['branch', 'roles', 'branches']));
     }
 
     public function setDebtLimit(SetDebtLimitRequest $request, User $user): UserResource

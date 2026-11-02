@@ -9,23 +9,38 @@ import { defineConfig, loadEnv } from 'vite'
 // Prodda `VITE_API_URL` to'liq manzilga qo'yiladi (o'shanda `config/cors.php`
 // dagi `FRONTEND_URL` ishlaydi).
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+    const env = loadEnv(mode, process.cwd(), '')
 
-  return {
-    plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url)),
-      },
-    },
-    server: {
-      port: 5173,
-      proxy: {
-        '/api': {
-          target: env.VITE_BACKEND_URL || 'http://localhost:8000',
-          changeOrigin: true,
+    return {
+        plugins: [react(), tailwindcss()],
+        build: {
+            rollupOptions: {
+                output: {
+                    manualChunks: {
+                        'react-vendor': [
+                            'react',
+                            'react-dom',
+                            'react-router-dom',
+                        ],
+                        'data-vendor': ['@tanstack/react-query', 'zustand'],
+                        'i18n-vendor': ['i18next', 'react-i18next'],
+                    },
+                },
+            },
         },
-      },
-    },
-  }
+        resolve: {
+            alias: {
+                '@': fileURLToPath(new URL('./src', import.meta.url)),
+            },
+        },
+        server: {
+            port: 5173,
+            proxy: {
+                '/api': {
+                    target: env.VITE_BACKEND_URL || 'http://localhost:8000',
+                    changeOrigin: true,
+                },
+            },
+        },
+    }
 })

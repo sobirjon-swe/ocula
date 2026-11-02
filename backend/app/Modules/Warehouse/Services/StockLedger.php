@@ -8,10 +8,12 @@ use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
 use App\Modules\Warehouse\Enums\LayerSource;
 use App\Modules\Warehouse\Enums\MovementType;
+use App\Modules\Warehouse\Models\Purchase;
 use App\Modules\Warehouse\Models\StockLayer;
 use App\Modules\Warehouse\Models\StockLayerConsumption;
 use App\Modules\Warehouse\Models\StockMovement;
 use App\Support\Money\Money;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -47,17 +49,23 @@ final class StockLedger
         MovementType $type = MovementType::Purchase,
         ?Model $document = null,
         ?string $reason = null,
+        ?CarbonImmutable $receivedAt = null,
+        ?int $originPurchaseId = null,
+        bool $costIncomplete = false,
     ): StockMovement {
         $this->assertDirection($type, $quantity, 1);
 
         $source = $type->layerSource() ?? LayerSource::Adjustment;
 
         return DB::transaction(function () use (
-            $author, $location, $variantId, $quantity, $unitCost, $type, $document, $reason, $source
+            $author, $location, $variantId, $quantity, $unitCost, $type, $document, $reason, $source, $receivedAt, $originPurchaseId, $costIncomplete
         ): StockMovement {
+            StockMutationLock::acquire();
+            $variantId = $this->canonicalVariantId($variantId);
+            Location::withoutGlobalScopes()->whereKey($location->id)->lockForUpdate()->firstOrFail();
             $movement = $this->writeMovement(
                 $author, $location, $variantId, abs($quantity), $type,
-                $unitCost->multipliedBy(abs($quantity)), false, $document, $reason,
+                $unitCost->multipliedBy(abs($quantity)), $costIncomplete, $document, $reason,
             );
 
             StockLayer::create([
@@ -70,7 +78,8 @@ final class StockLedger
                 'unit_cost' => $unitCost->toString(),
                 'quantity_in' => abs($quantity),
                 'quantity_remaining' => abs($quantity),
-                'received_at' => now(),
+                'received_at' => $receivedAt ?? now(),
+                'origin_purchase_id' => $originPurchaseId ?? ($document instanceof Purchase ? $document->id : null),
             ]);
 
             $this->applyToBalance($location, $variantId, abs($quantity));
@@ -96,15 +105,19 @@ final class StockLedger
         MovementType $type = MovementType::Sale,
         ?Model $document = null,
         ?string $reason = null,
+        bool $resolveMerge = true,
     ): StockMovement {
         $this->assertDirection($type, $quantity, -1);
 
         $needed = $quantity;
 
         return DB::transaction(function () use (
-            $author, $location, $variantId, $needed, $type, $document, $reason
+            $author, $location, $variantId, $needed, $type, $document, $reason, $resolveMerge
         ): StockMovement {
-            $layers = StockLayer::query()
+            StockMutationLock::acquire();
+            $variantId = $resolveMerge ? $this->canonicalVariantId($variantId) : $variantId;
+            Location::withoutGlobalScopes()->whereKey($location->id)->lockForUpdate()->firstOrFail();
+            $layers = StockLayer::withoutGlobalScopes()
                 ->available($variantId, $location->id)
                 ->lockForUpdate()
                 ->get();
@@ -156,12 +169,42 @@ final class StockLedger
         }
 
         return DB::transaction(function () use ($author, $movement, $reason): StockMovement {
-            $location = $movement->location()->firstOrFail();
+            StockMutationLock::acquire();
+            $location = $movement->location()->withoutGlobalScopes()->lockForUpdate()->firstOrFail();
+            if ($movement->isReversed()) {
+                throw ValidationException::withMessages(['movement' => __('warehouse::stock.already_reversed')]);
+            }
 
-            return $movement->isIncoming()
+            $reversal = $movement->isIncoming()
                 ? $this->reverseIncoming($author, $movement, $location, $reason)
                 : $this->reverseOutgoing($author, $movement, $location, $reason);
+            $canonical = $this->canonicalVariantId($movement->variant_id);
+            if ($reversal->isIncoming() && $canonical !== $movement->variant_id) {
+                $out = $this->issue($author, $location, $movement->variant_id, $reversal->quantity, MovementType::Merge, reason: $reason, resolveMerge: false);
+                foreach ($out->consumptions()->with('layer')->get() as $part) {
+                    $this->receive($author, $location, $canonical, $part->quantity, $part->unit_cost, MovementType::Merge, reason: $reason,
+                        receivedAt: $part->layer->received_at, originPurchaseId: $part->layer->getAttribute('origin_purchase_id'));
+                }
+            }
+
+            return $reversal;
         });
+    }
+
+    private function canonicalVariantId(int $variantId): int
+    {
+        $seen = [];
+        while (true) {
+            if (isset($seen[$variantId])) {
+                throw ValidationException::withMessages(['variant_id' => __('catalog::product.merge_incompatible')]);
+            }
+            $seen[$variantId] = true;
+            $target = DB::table('product_variants')->where('id', $variantId)->value('merged_into_id');
+            if ($target === null) {
+                return $variantId;
+            }
+            $variantId = (int) $target;
+        }
     }
 
     /**

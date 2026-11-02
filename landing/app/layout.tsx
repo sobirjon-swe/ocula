@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { isLocale } from "@/lib/i18n";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+
+
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -31,16 +33,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: {children:React.ReactNode}) {
+  const language=(await headers()).get('x-optika-locale')??'uz-latn';
+  const locale=isLocale(language)?language:'uz-latn';
   return (
     <html
-      lang="uz"
+      lang={locale??"uz-latn"}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+
+        {children}
+
       </body>
     </html>
   );

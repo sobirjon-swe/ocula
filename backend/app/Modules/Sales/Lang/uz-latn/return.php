@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'refund_exceeds_return' => 'Pul qaytarish summasi qaytarilgan tovarlar qiymatidan oshmasligi kerak.',
     'no_items' => "Qaytarishda birorta satr yo'q.",
     'order_not_delivered' => 'Tovar hali topshirilmagan — buyurtmani bekor qiling.',
     'quantity_exceeds_sold' => 'Bunchasi sotilmagan yoki allaqachon qaytarilgan: :available dona qaytarish mumkin.',

@@ -30,6 +30,12 @@ trait ActsAsEmployee
 
         $user->assignRole($role->value);
 
+        // Ordinary sales fixtures model the configured seller allowance.
+        // Credit-policy tests override this explicitly to exercise zero limits.
+        if (in_array($role, [Role::Seller, Role::Director, Role::BranchManager], true)) {
+            $user->update(['debt_limit' => '5000000.00']);
+        }
+
         return $user;
     }
 

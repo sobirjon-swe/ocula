@@ -11,7 +11,9 @@ export function Spinner({ className }: { className?: string }) {
 
 export function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-12 text-neutral-500">
+    <div role="status" className="space-y-3 px-4 py-12 text-neutral-600">
+      <div aria-hidden className="h-5 w-2/3 animate-pulse rounded bg-neutral-200" />
+      <div aria-hidden className="h-16 animate-pulse rounded-xl bg-neutral-200" />
       <Spinner />
       <span>{label}</span>
     </div>
@@ -29,7 +31,7 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
     error instanceof ApiError ? error.message : error instanceof Error ? error.message : String(error)
 
   return (
-    <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 ring-1 ring-red-200">
+    <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-800 ring-1 ring-red-200">
       <p>{message}</p>
       {onRetry !== undefined && (
         <button

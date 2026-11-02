@@ -28,13 +28,17 @@ final class CsvResponse
     {
         $response = new StreamedResponse(function () use ($headers, $rows): void {
             $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                throw new \RuntimeException('Unable to open the CSV output stream.');
+            }
 
             // BOM — Excel UTF-8'ni to'g'ri o'qishi uchun.
             fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $headers);
 
             foreach ($rows as $row) {
-                fputcsv($handle, $row);
+                $safe = array_map(static fn (mixed $value): mixed => is_string($value) && preg_match('/^[=+@-]/', $value) && ! is_numeric($value) ? "'".$value : $value, $row);
+                fputcsv($handle, $safe, escape: '');
             }
 
             fclose($handle);

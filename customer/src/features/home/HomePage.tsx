@@ -20,7 +20,7 @@ import { useDebt } from '@/features/debt/api'
 export function HomePage() {
   const t = useT()
   const customer = useSession((state) => state.customer)
-  const orders = useOrders()
+  const orders = useOrders(1, true)
   const prescriptions = usePrescriptions()
   const debt = useDebt()
 
@@ -75,20 +75,22 @@ export function HomePage() {
         )}
       </Section>
 
+      {prescriptions.data?.data[0]?.valid_until && <p className="text-sm text-neutral-700">{t('home.nextExam')}: {new Intl.DateTimeFormat('ru-RU',{timeZone:'Asia/Tashkent'}).format(new Date(prescriptions.data.data[0].valid_until))}</p>}
       <Section title={t('home.debt')}>
         {debt.isPending && <LoadingBlock label={t('app.loading')} />}
         {debt.isError && <ErrorBlock error={debt.error} onRetry={() => debt.refetch()} />}
         {debt.data !== undefined && (
-          <Card>
+          <Link to="/debt"><Card>
             {Number.parseFloat(debt.data.debt_balance) > 0 ? (
               <p className="text-lg font-semibold text-red-700">{formatMoney(debt.data.debt_balance)}</p>
             ) : (
               <p className="text-sm text-neutral-500">{t('home.noDebt')}</p>
             )}
-          </Card>
+          </Card></Link>
         )}
       </Section>
 
+      <Link to="/check-in" className="block py-3 font-medium text-brand-700 underline underline-offset-4">{t('checkin.title')}</Link>
       <Link
         to="/orders"
         className="flex items-center justify-between rounded-2xl bg-white p-4 text-sm font-medium text-neutral-700 ring-1 ring-neutral-200"

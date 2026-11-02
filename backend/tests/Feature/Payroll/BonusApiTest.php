@@ -50,7 +50,7 @@ final class BonusApiTest extends TestCase
         $this->actingAs($seller, 'sanctum');
         $response = $this->getJson('/api/v1/bonus-entries')->assertOk();
 
-        $ids = collect($response->json('data'))->pluck('user_id')->all();
+        $ids = $response->collect('data')->pluck('user_id')->all();
         $this->assertSame([$seller->id], array_unique($ids));
     }
 
@@ -86,6 +86,19 @@ final class BonusApiTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('15000.00', $movement->amount->toString());
+    }
+
+    #[Test]
+    public function a_partially_reversed_bonus_only_pays_the_remaining_earned_amount(): void
+    {
+        $this->actingAsDirector();
+        $entry = BonusEntry::factory()->create(['amount' => '15000']);
+        BonusEntry::factory()->create([
+            'user_id' => $entry->user_id, 'reverses_id' => $entry->id,
+            'amount' => '-5000', 'status' => BonusStatus::Reversed,
+        ]);
+        $this->postAction("/api/v1/bonus-entries/{$entry->id}/pay", ['branch_id' => $this->branch->id])->assertOk();
+        $this->assertSame('10000.00', CashMovement::withoutGlobalScopes()->where('category', CashCategory::BonusPayout->value)->firstOrFail()->amount->toString());
     }
 
     #[Test]

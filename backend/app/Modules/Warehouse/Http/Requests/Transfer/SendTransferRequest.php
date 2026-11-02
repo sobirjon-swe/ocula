@@ -37,6 +37,7 @@ class SendTransferRequest extends FormRequest
                 'nullable', 'numeric', 'gt:0', 'max:9999999999999',
             ],
             'taxi_receipt_path' => ['nullable', 'string', 'max:255'],
+            'taxi_receipt_photo' => ['nullable', 'string', 'max:2800000'],
         ];
     }
 }

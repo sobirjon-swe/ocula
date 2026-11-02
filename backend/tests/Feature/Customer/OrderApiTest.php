@@ -38,7 +38,7 @@ final class OrderApiTest extends TestCase
         $theirs = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => Customer::factory()->create()->id]);
 
         $response = $this->getJson('/api/v1/customer/orders')->assertOk();
-        $ids = collect($response->json('data'))->pluck('id');
+        $ids = $response->collect('data')->pluck('id');
 
         $this->assertTrue($ids->contains($mine->id));
         $this->assertFalse($ids->contains($theirs->id));
@@ -52,5 +52,22 @@ final class OrderApiTest extends TestCase
         $theirs = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => Customer::factory()->create()->id]);
 
         $this->getJson("/api/v1/customer/orders/{$theirs->id}")->assertNotFound();
+    }
+
+    #[Test]
+    public function a_customer_rates_only_their_delivered_order_and_can_update_the_rating(): void
+    {
+        $customer = $this->actingAsCustomer();
+        $order = Order::factory()->create(['customer_id' => $customer->id, 'status' => 'delivered']);
+        $url = "/api/v1/customer/orders/{$order->id}/rating";
+        $this->getJson($url)->assertOk()->assertJsonPath('data', null);
+        $this->postJson($url, ['stars' => 5, 'comment' => 'Rahmat'])->assertOk()->assertJsonPath('data.stars', 5);
+        $this->postJson($url, ['stars' => 4, 'comment' => 'Yaxshi'])->assertOk();
+        $this->getJson($url)->assertOk()->assertJsonPath('data.stars', 4);
+        $this->postJson($url, ['stars' => 6])->assertUnprocessable();
+        $other = Order::factory()->create(['status' => 'delivered']);
+        $this->postJson("/api/v1/customer/orders/{$other->id}/rating", ['stars' => 5])->assertNotFound();
+        $pending = Order::factory()->create(['customer_id' => $customer->id, 'status' => 'new']);
+        $this->postJson("/api/v1/customer/orders/{$pending->id}/rating", ['stars' => 5])->assertUnprocessable();
     }
 }

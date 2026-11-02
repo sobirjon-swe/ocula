@@ -1,4 +1,6 @@
-import { Share2 } from 'lucide-react'
+import { useState } from 'react'
+import { Download, Printer } from 'lucide-react'
+import { prescriptionImage, downloadPrescription, printPrescription } from './export'
 
 import { Button } from '@/components/ui/button'
 import { Badge, ErrorBlock, LoadingBlock } from '@/components/ui/feedback'
@@ -16,7 +18,8 @@ import { usePrescriptions } from './api'
  */
 export function PrescriptionsPage() {
   const t = useT()
-  const prescriptions = usePrescriptions()
+  const [page,setPage] = useState(1)
+  const prescriptions = usePrescriptions(page)
 
   return (
     <div className="space-y-4 p-4 pb-24">
@@ -35,6 +38,7 @@ export function PrescriptionsPage() {
           <PrescriptionCard key={prescription.id} prescription={prescription} />
         ))}
       </div>
+      <nav aria-label="Pagination" className="flex justify-between gap-4"><button className="min-h-11 px-3 disabled:opacity-40" disabled={page===1} onClick={()=>setPage(page-1)}>{t('page.previous')}</button><span className="py-3">{page}</span><button className="min-h-11 px-3 disabled:opacity-40" disabled={prescriptions.data===undefined || page>=(prescriptions.data?.meta.last_page??1)} onClick={()=>setPage(page+1)}>{t('page.next')}</button></nav>
     </div>
   )
 }
@@ -42,20 +46,7 @@ export function PrescriptionsPage() {
 function PrescriptionCard({ prescription }: { prescription: Prescription }) {
   const t = useT()
 
-  function share() {
-    const text = [
-      `OPTIKA — ${t('prescriptions.title')}`,
-      `${t('prescriptions.od')}: SPH ${prescription.od.sph ?? '—'} CYL ${prescription.od.cyl ?? '—'} AXIS ${prescription.od.axis ?? '—'}`,
-      `${t('prescriptions.os')}: SPH ${prescription.os.sph ?? '—'} CYL ${prescription.os.cyl ?? '—'} AXIS ${prescription.os.axis ?? '—'}`,
-      prescription.pd !== null ? `PD: ${prescription.pd}` : null,
-    ]
-      .filter((line) => line !== null)
-      .join('\n')
-
-    if (navigator.share !== undefined) {
-      navigator.share({ text }).catch(() => {})
-    }
-  }
+  function image() { return prescriptionImage(prescription, { title: t('prescriptions.title'), valid: t('prescriptions.validUntil'), expired: t('prescriptions.expired'), near:t('prescriptions.pdNear'), prism:t('prescriptions.prism') }) }
 
   return (
     <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 text-white shadow-lg">
@@ -86,17 +77,17 @@ function PrescriptionCard({ prescription }: { prescription: Prescription }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-b-2xl bg-black/10 px-5 py-3 text-sm">
+      {prescription.prism && <p className="px-5 pb-3 text-sm">{t('prescriptions.prism')}: {prescription.prism}</p>}
+      {prescription.notes && <p className="whitespace-pre-wrap break-words px-5 pb-4 text-sm">{prescription.notes}</p>}
+      <div className="flex flex-wrap gap-3 items-center justify-between rounded-b-2xl bg-black/10 px-5 py-3 text-sm">
         <div>
           <div className="font-medium">{prescription.doctor}</div>
           <div className="text-brand-100">{prescription.branch}</div>
         </div>
-        {navigator.share !== undefined && (
-          <Button variant="ghost" size="md" onClick={share} className="text-white hover:bg-white/10">
-            <Share2 className="h-4 w-4" aria-hidden />
-            {t('prescriptions.save')}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" size="md" onClick={() => downloadPrescription(image(), prescription.id)} className="text-white hover:bg-white/10"><Download className="h-4 w-4" aria-hidden />{t('prescriptions.save')}</Button>
+          <Button variant="ghost" size="md" onClick={() => printPrescription(image())} className="text-white hover:bg-white/10"><Printer className="h-4 w-4" aria-hidden />{t('prescriptions.print')}</Button>
+        </div>
       </div>
     </div>
   )

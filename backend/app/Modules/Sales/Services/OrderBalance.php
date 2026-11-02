@@ -32,7 +32,7 @@ final class OrderBalance
     public function refresh(Order $order): Order
     {
         $paid = $order->paidAmount();
-        $debt = $order->total->minus($paid);
+        $debt = $order->status === OrderStatus::Cancelled ? Money::zero() : $order->payableTotal()->minus($paid);
 
         $order->update([
             'paid' => $paid->toString(),
@@ -41,6 +41,12 @@ final class OrderBalance
         ]);
 
         $this->closeIfSettled($order);
+        if ($order->delivered_at !== null && $order->payment_status !== PaymentStatus::Paid && $order->status !== OrderStatus::Returned) {
+            if ($order->status === OrderStatus::Closed) {
+                $order->update(['status' => OrderStatus::Delivered, 'status_changed_at' => now()]);
+            }
+            $this->bonuses->reconcilePayment($order, false);
+        }
         $this->debts->syncForOrder($order);
 
         return $order;
@@ -58,7 +64,7 @@ final class OrderBalance
             return PaymentStatus::Unpaid;
         }
 
-        return $paid->greaterThanOrEqual($order->total)
+        return $paid->greaterThanOrEqual($order->payableTotal())
             ? PaymentStatus::Paid
             : PaymentStatus::Partial;
     }
@@ -83,5 +89,6 @@ final class OrderBalance
         ]);
 
         $this->bonuses->accrueForOrder($order);
+        $this->bonuses->reconcilePayment($order, true);
     }
 }

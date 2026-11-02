@@ -18,13 +18,15 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class BonusRuleResolver
 {
-    public function resolve(User $user, ?CarbonImmutable $date = null): ?BonusRule
+    public function resolve(User $user, ?CarbonImmutable $date = null, ?string $productType = null): ?BonusRule
     {
-        $date ??= CarbonImmutable::today();
+        $date ??= CarbonImmutable::today('Asia/Tashkent');
 
         $personal = BonusRule::query()
             ->where('user_id', $user->id)
+            ->where(fn (Builder $query) => $query->whereNull('product_type')->orWhere('product_type', $productType))
             ->activeOn($date)
+            ->orderByRaw('product_type IS NULL')
             ->orderByDesc('valid_from')
             ->first();
 
@@ -40,6 +42,7 @@ final class BonusRuleResolver
 
         return BonusRule::query()
             ->whereNull('user_id')
+            ->where(fn (Builder $query) => $query->whereNull('product_type')->orWhere('product_type', $productType))
             ->whereIn('role', $roles)
             ->where(function (Builder $query) use ($user): void {
                 $query->where('branch_id', $user->branch_id)->orWhereNull('branch_id');
@@ -48,6 +51,7 @@ final class BonusRuleResolver
             // Filialga mos qoida (branch_id IS NOT NULL) tarmoq bo'yicha
             // umumiysidan ustun — Postgres'da false (0) true (1) dan oldin.
             ->orderByRaw('branch_id IS NULL')
+            ->orderByRaw('product_type IS NULL')
             ->orderByDesc('valid_from')
             ->first();
     }

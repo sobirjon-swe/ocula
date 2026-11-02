@@ -14,6 +14,8 @@ class StoreExpenseCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name_translations' => ['nullable', 'array:uz-latn,ru,en'],
+            'name_translations.*' => ['nullable', 'string', 'max:120'],
             'name' => ['required', 'string', 'max:120', 'unique:expense_categories,name'],
             'code' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:expense_categories,code'],
             'is_active' => ['boolean'],

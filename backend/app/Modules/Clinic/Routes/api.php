@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Landing sayt uchun ochiq (hisobsiz) — BOSQICH-11.md.
-Route::middleware('throttle:10,1')->prefix('public')->name('api.public.')->group(function (): void {
+Route::prefix('public')->name('api.public.')->group(function (): void {
     Route::post('appointments', [PublicAppointmentController::class, 'store'])->name('appointments.store');
 });
 

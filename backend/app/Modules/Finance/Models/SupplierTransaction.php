@@ -45,7 +45,7 @@ class SupplierTransaction extends Model
 
     protected $fillable = [
         'supplier_id', 'type', 'amount', 'purchase_id', 'due_date',
-        'reverses_id', 'reason', 'created_by',
+        'reverses_id', 'reason', 'created_by', 'supplier_return_id',
     ];
 
     /**

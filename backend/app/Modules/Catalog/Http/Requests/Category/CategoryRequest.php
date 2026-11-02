@@ -26,6 +26,8 @@ class CategoryRequest extends FormRequest
         $id = $route instanceof Category ? $route->getKey() : $route;
 
         return [
+            'name_translations' => ['nullable', 'array:uz-latn,ru,en'],
+            'name_translations.*' => ['nullable', 'string', 'max:120'],
             'name' => [$this->isMethod('POST') ? 'required' : 'sometimes', 'string', 'max:120'],
             'parent_id' => [
                 'nullable',

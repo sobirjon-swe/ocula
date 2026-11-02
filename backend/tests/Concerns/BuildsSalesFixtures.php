@@ -12,6 +12,7 @@ use App\Modules\Core\Enums\LocationType;
 use App\Modules\Core\Models\Branch;
 use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
+use App\Modules\Sales\Models\Customer;
 use App\Modules\Warehouse\Services\StockLedger;
 use App\Support\Money\Money;
 use Illuminate\Http\JsonResponse;
@@ -111,6 +112,7 @@ trait BuildsSalesFixtures
         return [
             'branch_id' => $this->branch->id,
             'type' => 'quick',
+            'customer_id' => Customer::factory()->create()->id,
             'items' => $items ?? [
                 ['kind' => 'variant', 'id' => $this->variant->id, 'quantity' => $quantity],
             ],

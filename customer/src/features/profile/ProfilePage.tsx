@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 
+import { ErrorBlock } from '@/components/ui/feedback'
 import { Button } from '@/components/ui/button'
 import { Input, Select } from '@/components/ui/input'
 import { LOCALE_OPTIONS, useT } from '@/lib/i18n'
-import type { TranslatedLocale } from '@/lib/i18n'
 import { useSession } from '@/lib/session'
 import type { Locale } from '@/lib/api/types'
 
@@ -18,9 +18,7 @@ export function ProfilePage() {
 
   const [name, setName] = useState(customer?.name ?? '')
   const [phone, setPhone] = useState(customer?.phone ?? '')
-  const [selectedLocale, setSelectedLocale] = useState<TranslatedLocale>(
-    locale === 'uz-cyrl' ? 'uz-latn' : locale,
-  )
+  const [selectedLocale, setSelectedLocale] = useState<Locale>(locale)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -36,6 +34,8 @@ export function ProfilePage() {
           label={t('profile.name')}
           value={name}
           onChange={(event) => setName(event.target.value)}
+          required
+          autoComplete="name"
           maxLength={160}
           error={update.error?.fieldError('name')}
         />
@@ -51,7 +51,7 @@ export function ProfilePage() {
         <Select
           label={t('profile.locale')}
           value={selectedLocale}
-          onChange={(event) => setSelectedLocale(event.target.value as TranslatedLocale)}
+          onChange={(event) => setSelectedLocale(event.target.value as Locale)}
         >
           {LOCALE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -64,6 +64,7 @@ export function ProfilePage() {
           {t('profile.save')}
         </Button>
 
+        {update.isError && <ErrorBlock error={update.error} />}
         {update.isSuccess && <p className="text-center text-sm text-green-700">{t('profile.saved')}</p>}
       </form>
     </div>

@@ -36,11 +36,12 @@ final class StaffPerformanceReportService
             ->when($branchIds !== null, fn ($query) => $query->whereIn('orders.branch_id', $branchIds))
             ->selectRaw(
                 'bonus_entries.user_id, '
-                .'COUNT(CASE WHEN bonus_entries.reverses_id IS NULL THEN 1 END) as orders_count, '
+                .'COUNT(DISTINCT CASE WHEN bonus_entries.reverses_id IS NULL THEN bonus_entries.order_id END) as orders_count, '
                 .'COALESCE(SUM(bonus_entries.amount), 0) as bonus_total',
             )
             ->groupBy('bonus_entries.user_id')
             ->orderByDesc('bonus_total')
+            ->toBase()
             ->get();
 
         return $rows->map(static fn (object $row): array => [

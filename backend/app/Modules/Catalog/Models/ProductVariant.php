@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $id
  * @property int $product_id
+ * @property int|null $merged_into_id
  * @property array<string, mixed> $attributes_json
  * @property LensCoating|null $coating
  */
@@ -34,7 +35,7 @@ class ProductVariant extends Model
     protected $fillable = [
         'product_id', 'sku', 'barcode', 'attributes',
         'sph', 'cyl', 'axis', 'add', 'index', 'coating',
-        'diameter', 'color', 'size', 'is_active',
+        'diameter', 'color', 'size', 'is_active', 'merged_into_id',
     ];
 
     /**

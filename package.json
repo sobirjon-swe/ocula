@@ -1,0 +1,14 @@
+{
+  "name": "optika",
+  "private": true,
+  "scripts": {
+    "install:frontends": "npm ci --prefix admin && npm ci --prefix customer && npm ci --prefix landing",
+    "build": "npm run build --prefix admin && npm run build --prefix customer && npm run build --prefix landing",
+    "lint": "npm run lint --prefix admin && npm run lint --prefix customer && npm run lint --prefix landing",
+    "test:frontends": "node --test admin/tests/*.test.mjs customer/tests/*.test.mjs landing/tests/*.test.mjs",
+    "check": "npm run lint && npm run build && npm run test:frontends",
+    "dev:admin": "npm run dev --prefix admin",
+    "dev:customer": "npm run dev --prefix customer",
+    "dev:landing": "npm run dev --prefix landing"
+  }
+}

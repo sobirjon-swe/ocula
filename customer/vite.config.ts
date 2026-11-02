@@ -12,7 +12,13 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), {
+      name: 'offline-shell',
+      generateBundle(_options, bundle) {
+        const assets = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', ...Object.keys(bundle).filter(name => name.startsWith('assets/')).map(name => '/' + name)]
+        this.emitFile({ type: 'asset', fileName: 'sw-assets.js', source: 'self.__SHELL_ASSETS__ = ' + JSON.stringify(assets) + ';' })
+      },
+    }],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

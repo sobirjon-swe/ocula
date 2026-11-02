@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'refund_exceeds_return' => 'Возврат денег не может превышать стоимость возвращаемых товаров.',
     'no_items' => 'В возврате нет ни одной строки.',
     'order_not_delivered' => 'Товар ещё не выдан — отмените заказ.',
     'quantity_exceeds_sold' => 'Столько не продано или уже возвращено: можно вернуть :available шт.',

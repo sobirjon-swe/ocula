@@ -1,0 +1,37 @@
+<?php
+
+$messages = require base_path('vendor/laravel/framework/src/Illuminate/Translation/lang/en/validation.php');
+
+return array_replace_recursive($messages, [
+    'required' => 'Заполните поле «:attribute».',
+    'required_if' => 'Заполните «:attribute», если :other равно :value.',
+    'required_without' => 'Заполните поле «:attribute».',
+    'required_with' => 'Заполните поле «:attribute».',
+    'filled' => 'Не оставляйте «:attribute» пустым.',
+    'exists' => 'Выбранное значение «:attribute» не найдено. Обновите список.',
+    'unique' => 'Значение «:attribute» уже используется. Укажите другое.',
+    'enum' => 'Выберите «:attribute» из списка.', 'in' => 'Выберите «:attribute» из списка.',
+    'not_in' => 'Выберите другое значение «:attribute».',
+    'integer' => 'Укажите целое число в поле «:attribute».',
+    'numeric' => 'Укажите число в поле «:attribute».',
+    'decimal' => 'В поле «:attribute» должно быть :decimal знаков после запятой.',
+    'string' => 'Укажите текст в поле «:attribute».', 'array' => 'Передайте «:attribute» в виде списка.',
+    'boolean' => 'Выберите да или нет для «:attribute».',
+    'date' => 'Укажите правильную дату в поле «:attribute».',
+    'date_format' => 'Укажите «:attribute» в формате :format.',
+    'after' => 'Дата «:attribute» должна быть позже :date.',
+    'after_or_equal' => 'Дата «:attribute» не должна быть раньше :date.',
+    'email' => 'Укажите правильный адрес email в поле «:attribute».',
+    'regex' => 'Проверьте формат поля «:attribute».', 'confirmed' => 'Подтверждение «:attribute» не совпадает.',
+    'different' => 'Значения «:attribute» и «:other» должны отличаться.',
+    'distinct' => 'Значение «:attribute» не должно повторяться.',
+    'digits' => 'Укажите :digits цифр в поле «:attribute».',
+    'uuid' => 'Проверьте идентификатор «:attribute».', 'url' => 'Укажите правильную ссылку «:attribute».',
+    'alpha_dash' => 'Используйте буквы, цифры, дефис или подчёркивание в поле «:attribute».',
+    'min' => ['numeric' => '«:attribute» должно быть не меньше :min.', 'string' => '«:attribute» должно содержать минимум :min символов.', 'array' => 'Добавьте минимум :min значений в «:attribute».', 'file' => 'Размер «:attribute» должен быть не меньше :min КБ.'],
+    'max' => ['numeric' => '«:attribute» не должно превышать :max.', 'string' => '«:attribute» не должно превышать :max символов.', 'array' => 'В «:attribute» должно быть не больше :max значений.', 'file' => 'Размер «:attribute» не должен превышать :max КБ.'],
+    'between' => ['numeric' => '«:attribute» должно быть от :min до :max.', 'string' => '«:attribute» должно содержать :min–:max символов.', 'array' => 'В «:attribute» должно быть :min–:max значений.', 'file' => 'Размер «:attribute» должен быть :min–:max КБ.'],
+    'gt' => ['numeric' => '«:attribute» должно быть больше :value.'],
+    'gte' => ['numeric' => '«:attribute» должно быть не меньше :value.'],
+    'attributes' => ['phone' => 'Телефон', 'password' => 'Пароль', 'name' => 'Имя', 'locale' => 'Язык', 'branch_id' => 'Филиал', 'customer_id' => 'Клиент', 'amount' => 'Сумма', 'price' => 'Цена', 'quantity' => 'Количество', 'lat' => 'Широта', 'lng' => 'Долгота', 'items' => 'Товары', 'date' => 'Дата', 'reason' => 'Причина', 'note' => 'Примечание', 'stars' => 'Оценка'],
+]);

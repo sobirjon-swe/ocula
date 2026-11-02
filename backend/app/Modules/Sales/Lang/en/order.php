@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'credit_customer_required' => 'A customer is required for a credit sale.',
+    'credit_approval_required' => 'Customer credit exceeds the employee allowance; director approval is required.',
+    'credit_approval_not_deliverable' => 'Only an undelivered order can receive credit approval.',
     'no_items' => 'The receipt has no lines — add a product or a service first.',
     'no_price' => 'This product has no price set (variant :id). Set a price first.',
     'discount_exceeds_line' => 'The discount cannot exceed the line total.',

@@ -30,7 +30,7 @@ use Illuminate\Validation\ValidationException;
 final class CreateVisit
 {
     public function handle(
-        User $author,
+        ?User $author,
         Branch $branch,
         int $customerId,
         VisitSource $source = VisitSource::WalkIn,
@@ -40,7 +40,7 @@ final class CreateVisit
             // Filial qatorini qulflaymiz — raqam shu qulf ostida beriladi.
             Branch::query()->whereKey($branch->id)->lockForUpdate()->firstOrFail();
 
-            $date = now()->toDateString();
+            $date = now('Asia/Tashkent')->toDateString();
 
             $this->assertNotAlreadyInQueue($branch->id, $customerId, $date);
 
@@ -52,7 +52,7 @@ final class CreateVisit
                 'queue_date' => $date,
                 'status' => VisitStatus::Waiting,
                 'source' => $source,
-                'created_by' => $author->id,
+                'created_by' => $author?->id,
             ]);
         });
     }

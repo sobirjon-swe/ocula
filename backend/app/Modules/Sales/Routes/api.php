@@ -6,6 +6,7 @@ use App\Modules\Sales\Http\Controllers\CustomerController;
 use App\Modules\Sales\Http\Controllers\OrderController;
 use App\Modules\Sales\Http\Controllers\OrderReturnController;
 use App\Modules\Sales\Http\Controllers\PaymentController;
+use App\Modules\Sales\Http\Controllers\ReceiptController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,12 +24,14 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
+    Route::get('pos-config', [OrderController::class, 'posConfig'])->name('pos-config');
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
 
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('orders/{order}/receipt', ReceiptController::class)->name('orders.receipt');
 
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
 
@@ -36,6 +39,8 @@ Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
     Route::get('returns/{return}', [OrderReturnController::class, 'show'])->name('returns.show');
 
     Route::middleware('idempotency')->group(function (): void {
+        Route::post('checkout', [OrderController::class, 'checkout'])->name('checkout');
+        Route::post('orders/{order}/approve-debt', [OrderController::class, 'approveDebt'])->name('orders.approve-debt');
         Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
 
         Route::post('orders', [OrderController::class, 'store'])->name('orders.store');

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Resources;
 
+use App\Modules\Catalog\Models\ProductVariant;
+use App\Modules\Catalog\Models\Service;
 use App\Modules\Sales\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -25,11 +27,15 @@ class OrderItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         $seesCost = $request->user()?->can('catalog.cost.view') ?? false;
+        $itemable = $this->itemable;
 
         return [
             'id' => $this->id,
             'itemable_type' => class_basename($this->itemable_type),
             'itemable_id' => $this->itemable_id,
+            'name' => $itemable instanceof ProductVariant ? $itemable->product?->name
+                : ($itemable instanceof Service ? $itemable->name : ''),
+            'sku' => $itemable instanceof ProductVariant ? $itemable->sku : null,
             'quantity' => $this->quantity,
             'price' => $this->price->toString(),
             'discount' => $this->discount->toString(),

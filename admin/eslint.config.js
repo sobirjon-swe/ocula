@@ -9,6 +9,7 @@ export default tseslint.config(
   {
     ignores: ['dist', 'node_modules', '*.tsbuildinfo'],
   },
+  { files:['public/*.js'],languageOptions:{globals:globals.serviceworker} },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

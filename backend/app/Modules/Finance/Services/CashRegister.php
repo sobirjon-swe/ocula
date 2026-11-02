@@ -12,6 +12,7 @@ use App\Modules\Finance\Models\CashMovement;
 use App\Support\Contracts\CashLedger;
 use App\Support\Money\Money;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -89,36 +90,42 @@ final class CashRegister implements CashLedger
      */
     public function reverse(User $author, CashMovement $movement, string $reason): CashMovement
     {
-        if ($movement->category === CashCategory::ShiftOpening) {
-            throw ValidationException::withMessages([
-                'movement' => __('finance::cash.shift_opening_not_reversible'),
-            ]);
-        }
+        return DB::transaction(function () use ($author, $movement, $reason): CashMovement {
+            $movement = CashMovement::withoutGlobalScopes()->lockForUpdate()->findOrFail($movement->id);
+            if (trim($reason) === '') {
+                throw ValidationException::withMessages(['reason' => __('validation.required', ['attribute' => 'reason'])]);
+            }
+            if ($movement->category === CashCategory::ShiftOpening) {
+                throw ValidationException::withMessages([
+                    'movement' => __('finance::cash.shift_opening_not_reversible'),
+                ]);
+            }
 
-        if ($movement->reverses_id !== null) {
-            throw ValidationException::withMessages([
-                'movement' => __('finance::cash.reverse_of_reversal'),
-            ]);
-        }
+            if ($movement->reverses_id !== null) {
+                throw ValidationException::withMessages([
+                    'movement' => __('finance::cash.reverse_of_reversal'),
+                ]);
+            }
 
-        if ($movement->isReversed()) {
-            throw ValidationException::withMessages([
-                'movement' => __('finance::cash.already_reversed'),
-            ]);
-        }
+            if ($movement->isReversed()) {
+                throw ValidationException::withMessages([
+                    'movement' => __('finance::cash.already_reversed'),
+                ]);
+            }
 
-        return CashMovement::create([
-            'branch_id' => $movement->branch_id,
-            'shift_id' => $movement->shift_id,
-            'type' => $movement->type->opposite(),
-            'category' => CashCategory::Correction,
-            'amount' => $movement->amount->toString(),
-            'source_type' => $movement->source_type,
-            'source_id' => $movement->source_id,
-            'reverses_id' => $movement->id,
-            'reason' => $reason,
-            'created_by' => $author->id,
-        ]);
+            return CashMovement::create([
+                'branch_id' => $movement->branch_id,
+                'shift_id' => $this->openShiftId($movement->branch_id),
+                'type' => $movement->type->opposite(),
+                'category' => CashCategory::Correction,
+                'amount' => $movement->amount->toString(),
+                'source_type' => $movement->source_type,
+                'source_id' => $movement->source_id,
+                'reverses_id' => $movement->id,
+                'reason' => $reason,
+                'created_by' => $author->id,
+            ]);
+        });
     }
 
     /**

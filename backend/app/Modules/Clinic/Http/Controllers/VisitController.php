@@ -63,7 +63,7 @@ final class VisitController extends ApiController
 
         $visits = Visit::query()
             ->open()
-            ->forDate($request->string('date')->toString() ?: now()->toDateString())
+            ->forDate($request->string('date')->toString() ?: now('Asia/Tashkent')->toDateString())
             ->with('customer')
             ->orderBy('queue_number')
             ->paginate($this->perPage($request, 50))

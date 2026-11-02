@@ -39,17 +39,21 @@ final class DeadStockReportService
             ->where('type', MovementType::Sale->value)
             ->groupBy('variant_id', 'location_id');
 
+        $firstReceipt = DB::table('stock_movements')->select('variant_id', 'location_id', DB::raw('MIN(created_at) as first_received_at'))->where('quantity', '>', 0)->groupBy('variant_id', 'location_id');
         $rows = DB::table('stock_balances as sb')
             ->leftJoinSub($lastSale, 'ls', function ($join): void {
                 $join->on('sb.variant_id', '=', 'ls.variant_id')
                     ->on('sb.location_id', '=', 'ls.location_id');
             })
+            ->leftJoinSub($firstReceipt, 'receipt', function ($join): void {
+                $join->on('sb.variant_id', '=', 'receipt.variant_id')->on('sb.location_id', '=', 'receipt.location_id');
+            })
             ->where('sb.quantity', '>', 0)
             ->when($branchIds !== null, fn ($query) => $query->whereIn('sb.branch_id', $branchIds))
             ->where(function ($query) use ($threshold): void {
-                $query->whereNull('ls.last_sale_at')->orWhere('ls.last_sale_at', '<', $threshold);
+                $query->where('ls.last_sale_at', '<=', $threshold)->orWhere(fn ($q) => $q->whereNull('ls.last_sale_at')->where('receipt.first_received_at', '<=', $threshold));
             })
-            ->select('sb.branch_id', 'sb.variant_id', 'sb.location_id', 'sb.quantity', 'ls.last_sale_at')
+            ->select('sb.branch_id', 'sb.variant_id', 'sb.location_id', 'sb.quantity', 'ls.last_sale_at', 'receipt.first_received_at')
             ->orderBy('ls.last_sale_at')
             ->get();
 
@@ -59,6 +63,7 @@ final class DeadStockReportService
             'location_id' => (int) $row->location_id,
             'quantity' => (int) $row->quantity,
             'last_sale_at' => $row->last_sale_at,
+            'first_received_at' => $row->first_received_at,
         ])->all();
     }
 }

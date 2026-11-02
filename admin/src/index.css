@@ -31,3 +31,11 @@ body {
 :focus-visible {
   @apply outline-brand-500 outline-2 outline-offset-2;
 }
+
+.action-primary { @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50; }
+.action-secondary { @apply inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50; }
+::selection { background: #dbeafe; color: #172554; }
+input, textarea { caret-color: #2563eb; }
+* { scrollbar-width: thin; scrollbar-color: #a3a3a3 transparent; }
+@media print { body { background: white; } button, form, nav, header { display: none !important; } main { padding: 0; } }
+@media print { body * { visibility: hidden; } .print-target, .print-target * { visibility: visible; } .print-target { position: absolute; inset: 0; border: 0; } }

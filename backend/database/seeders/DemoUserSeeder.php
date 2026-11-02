@@ -24,6 +24,9 @@ class DemoUserSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new \RuntimeException('Demo employees are available only in local/testing.');
+        }
         $main = Branch::query()->where('code', 'A')->firstOrFail();
 
         // Markaziy filialda o'tiradigan xodimlar (PROJECT.md §1.1).

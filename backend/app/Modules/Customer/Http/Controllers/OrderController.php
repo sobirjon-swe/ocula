@@ -30,6 +30,7 @@ final class OrderController extends CustomerApiController
 
         $orders = Order::query()
             ->where('customer_id', $customer->id)
+            ->when($request->boolean('active'), fn ($query) => $query->whereNotIn('status', ['closed', 'delivered', 'cancelled', 'returned']))
             ->orderByDesc('created_at')
             ->paginate($this->perPage($request))
             ->withQueryString();

@@ -27,8 +27,19 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 final class CustomerController extends ApiController
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
+        $actor = $this->currentUser($request);
+        if (! $actor->can('sales.customer.view_any') && $actor->can('clinic.visit.create')) {
+            $customers = Customer::query()
+                ->when($request->filled('filter.name'), fn ($query) => $query->where('name', 'ilike', '%'.$request->input('filter.name').'%'))
+                ->when($request->filled('filter.phone'), fn ($query) => $query->where('phone', 'ilike', '%'.$request->input('filter.phone').'%'))
+                ->select(['id', 'name', 'phone'])
+                ->orderBy('name')
+                ->paginate($this->perPage($request));
+
+            return response()->json($customers);
+        }
         $this->authorize('viewAny', Customer::class);
 
         $customers = QueryBuilder::for(Customer::class)

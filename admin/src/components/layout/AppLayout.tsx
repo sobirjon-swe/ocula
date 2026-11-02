@@ -1,100 +1,153 @@
-import { Boxes, LogOut, Package } from 'lucide-react'
+import { useState } from 'react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
-
-import { Select } from '@/components/ui/input'
-import type { Locale } from '@/lib/api/types'
-import { LOCALE_OPTIONS, useT } from '@/lib/i18n'
-import { useSession } from '@/lib/session'
-import { cn } from '@/lib/utils'
-
 import { useLogout } from '@/features/auth/api'
-
-const NAV = [
-  { to: '/products', icon: Package, label: 'nav.products', permission: 'catalog.product.view_any' },
-  { to: '/stock', icon: Boxes, label: 'nav.stock', permission: 'warehouse.stock.view' },
-] as const
-
+import { useSession } from '@/lib/session'
+import type { Locale } from '@/lib/api/types'
+import { resources } from '@/features/workspace/resources'
+import { useLocalePreference } from '@/lib/i18n/preference'
+import { ErrorNotice } from '@/features/workspace/shared'
+import { useWords } from '@/features/workspace/copy'
 export function AppLayout() {
-  const t = useT()
-  const user = useSession((state) => state.user)
-  const permissions = useSession((state) => state.permissions)
-  const locale = useSession((state) => state.locale)
-  const setLocale = useSession((state) => state.setLocale)
-  const logout = useLogout()
-
-  // Ruxsati yo'q bo'lim menyuda ko'rinmaydi. Bu qulaylik — haqiqiy
-  // to'siq serverdagi Policy (`ResourcePolicy`).
-  const visible = NAV.filter((item) => permissions.includes(item.permission))
-
-  return (
-    <div className="flex min-h-full">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-neutral-200 bg-white lg:flex">
-        <div className="flex h-14 items-center px-5 text-lg font-semibold tracking-tight">
-          {t('app.name')}
-        </div>
-
-        <nav className="flex-1 space-y-1 px-3 py-2">
-          {visible.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
-                )
-              }
+    const w = useWords(),
+        user = useSession((s) => s.user),
+        permissions = useSession((s) => s.permissions),
+        locale = useSession((s) => s.locale),
+        preference = useLocalePreference(),
+        logout = useLogout(),
+        [menu, setMenu] = useState(false)
+    const nav = [
+        {
+            to: '/reports',
+            label: w(
+                'Bosh ekran va hisobotlar',
+                'Обзор и отчёты',
+                'Overview & reports',
+            ),
+            permission: 'analytics.dashboard.view',
+        },
+        {
+            to: '/pos',
+            label: w('Savdo', 'Продажа', 'Point of sale'),
+            permission: 'sales.order.create',
+        },
+        ...resources.map((r) => ({
+            to: '/work/' + r.path.replaceAll('/', '~'),
+            label: w(...r.title),
+            permission: permissions.includes(r.permission)
+                ? r.permission
+                : permissions.includes(r.alternatePermission ?? '')
+                  ? (r.alternatePermission ?? r.permission)
+                  : (r.createPermission ?? r.permission),
+        })),
+        {
+            to: '/stock',
+            label: w('Ombor qoldig‘i', 'Остатки склада', 'Stock balances'),
+            permission: 'warehouse.stock.view',
+        },
+        {
+            to: '/delivery',
+            label: w('Yetkazish', 'Доставка', 'Delivery'),
+            permission: 'delivery.trip.view_any',
+        },
+        {
+            to: '/settings',
+            label: w('Sozlamalar', 'Настройки', 'Settings'),
+            permission: 'core.settings.view',
+        },
+    ].filter((r) => permissions.includes(r.permission))
+    return (
+        <div className="min-h-screen lg:flex">
+            <aside
+                className={
+                    (menu ? 'fixed inset-0 z-40 flex' : 'hidden') +
+                    ' w-full shrink-0 flex-col border-r border-neutral-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 print:hidden'
+                }
             >
-              <Icon className="h-4 w-4" aria-hidden />
-              {t(label)}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-end gap-4 border-b border-neutral-200 bg-white px-6">
-          <div className="mr-auto flex items-center gap-2 lg:hidden">
-            <span className="font-semibold">{t('app.name')}</span>
-          </div>
-
-          {user !== null && (
-            <div className="text-right text-sm leading-tight">
-              <div className="font-medium text-neutral-900">{user.name}</div>
-              <div className="text-neutral-500">{user.branch?.name ?? user.phone}</div>
+                <div className="flex h-16 shrink-0 items-center justify-between px-5 text-xl font-semibold tracking-tight">
+                    OPTIKA
+                    <button
+                        className="rounded p-2 lg:hidden"
+                        onClick={() => setMenu(false)}
+                        aria-label={w(
+                            'Menyuni yopish',
+                            'Закрыть меню',
+                            'Close menu',
+                        )}
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                <nav
+                    className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-5"
+                    aria-label={w(
+                        'Asosiy menyu',
+                        'Основная навигация',
+                        'Main navigation',
+                    )}
+                >
+                    {nav.map((item) => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            onClick={() => setMenu(false)}
+                            className={({ isActive }) =>
+                                'block rounded-lg px-3 py-2 text-sm font-medium ' +
+                                (isActive
+                                    ? 'bg-brand-50 text-brand-700'
+                                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900')
+                            }
+                        >
+                            {item.label}
+                        </NavLink>
+                    ))}
+                </nav>
+            </aside>
+            <div className="min-w-0 flex-1">
+                <header className="flex min-h-16 flex-wrap items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 sm:px-6 print:hidden">
+                    <button
+                        className="rounded p-2 lg:hidden"
+                        onClick={() => setMenu(true)}
+                        aria-label={w(
+                            'Menyuni ochish',
+                            'Открыть меню',
+                            'Open menu',
+                        )}
+                    >
+                        <Menu size={20} />
+                    </button>
+                    <div className="mr-auto text-sm">
+                        <div className="font-medium">{user?.name}</div>
+                        <div className="text-neutral-500">
+                            {user?.branch?.name ?? user?.phone}
+                        </div>
+                    </div>
+                    <select
+                        aria-label={w('Til', 'Язык', 'Language')}
+                        className="max-w-36 rounded-lg border border-neutral-300 bg-white px-2 py-2 text-sm"
+                        value={locale}
+                        onChange={(e) =>
+                            preference.change(e.target.value as Locale)
+                        }
+                    >
+                        <option value="uz-latn">O‘zbekcha</option>
+                        <option value="uz-cyrl">Ўзбекча</option>
+                        <option value="ru">Русский</option>
+                        <option value="en">English</option>
+                    </select>
+                    <button
+                        className="rounded-lg p-2 text-neutral-600 hover:bg-neutral-100"
+                        onClick={() => logout.mutate()}
+                        aria-label={w('Chiqish', 'Выйти', 'Sign out')}
+                    >
+                        <LogOut size={18} />
+                    </button>
+                </header>
+                <main className="p-4 sm:p-6">
+                    <ErrorNotice error={preference.error} />
+                    <Outlet />
+                </main>
             </div>
-          )}
-
-          <Select
-            aria-label="Til"
-            value={locale === 'uz-cyrl' ? 'uz-latn' : locale}
-            onChange={(event) => setLocale(event.target.value as Locale)}
-            className="w-36"
-          >
-            {LOCALE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-
-          <button
-            type="button"
-            onClick={() => logout.mutate()}
-            title={t('nav.logout')}
-            className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
-          >
-            <LogOut className="h-4 w-4" aria-hidden />
-            <span className="sr-only">{t('nav.logout')}</span>
-          </button>
-        </header>
-
-        <main className="flex-1 p-6">
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  )
+        </div>
+    )
 }

@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Payroll;
 
 use App\Modules\Clinic\Models\Prescription;
+use App\Modules\Core\Enums\LocationType;
 use App\Modules\Core\Enums\Role;
 use App\Modules\Core\Models\Branch;
+use App\Modules\Core\Models\Location;
 use App\Modules\Core\Models\User;
 use App\Modules\Payroll\Enums\BonusBase;
 use App\Modules\Payroll\Enums\BonusStatus;
 use App\Modules\Payroll\Models\BonusEntry;
 use App\Modules\Payroll\Models\BonusRule;
 use App\Modules\Payroll\Services\BonusAccrual;
+use App\Modules\Sales\Actions\Order\DeliverOrder;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Enums\PaymentTxStatus;
@@ -145,9 +148,10 @@ final class BonusAccrualTest extends TestCase
         app(OrderBalance::class)->refresh($order);
 
         $entry = BonusEntry::query()->where('user_id', $master->id)->firstOrFail();
-        // 1 ta yakunlangan ish − 1 ta o'z braki = 0 net.
-        $this->assertSame('0.00', $entry->base_amount->toString());
-        $this->assertSame('0.00', $entry->amount->toString());
+        $this->assertSame('1.00', $entry->base_amount->toString());
+        $this->assertSame('0.00', (string) BonusEntry::where('user_id', $master->id)->sum('amount'));
+        app(BonusAccrual::class)->reverseForOrder($order->fresh());
+        $this->assertSame('0.00', (string) BonusEntry::where('user_id', $master->fresh()->id)->sum('amount'));
     }
 
     #[Test]
@@ -168,6 +172,88 @@ final class BonusAccrualTest extends TestCase
         $this->assertSame(BonusStatus::Reversed, $reversal->status);
         $this->assertSame('-10000.00', $reversal->amount->toString());
         $this->assertTrue($original->fresh()->isReversed());
+    }
+
+    #[Test]
+    public function a_prepaid_order_accrues_its_bonus_when_delivered(): void
+    {
+        $seller = User::factory()->for($this->branch)->create();
+        $seller->assignRole(Role::Seller->value);
+        $this->bonusRule(Role::Seller, BonusBase::Revenue, '5.00');
+        Location::factory()->for($this->branch)->create([
+            'type' => LocationType::Warehouse,
+        ]);
+        $order = $this->deliveredAndFullyPaidOrder($seller);
+        $order->update(['status' => OrderStatus::Ready, 'delivered_at' => null]);
+        app(OrderBalance::class)->refresh($order);
+
+        app(DeliverOrder::class)->handle($seller, $order);
+
+        $this->assertSame(OrderStatus::Closed, $order->fresh()->status);
+        $this->assertSame('10000.00', BonusEntry::query()->where('order_id', $order->id)->firstOrFail()->amount->toString());
+    }
+
+    #[Test]
+    public function late_master_defects_recover_paid_earnings_once_and_carry_forward_within_the_month(): void
+    {
+        $master = User::factory()->for($this->branch)->create();
+        $master->assignRole(Role::Master->value);
+        $rule = $this->bonusRule(Role::Master, BonusBase::Count, '0');
+        $rule->update(['rate' => '25000']);
+        $order = $this->deliveredAndFullyPaidOrder($this->author);
+        $work = WorkOrder::factory()->create(['order_id' => $order->id, 'master_id' => $master->id, 'branch_id' => $this->branch->id, 'status' => WorkOrderStatus::Done, 'finished_at' => now()]);
+        app(OrderBalance::class)->refresh($order);
+        BonusEntry::where('user_id', $master->id)->update(['status' => BonusStatus::Paid]);
+        $defects = [];
+        foreach (range(1, 2) as $i) {
+            $defects[] = $defect = Defect::factory()->create(['work_order_id' => $work->id, 'reason' => DefectReason::MasterError, 'branch_id' => $this->branch->id]);
+            app(BonusAccrual::class)->deductMasterDefect($defect);
+            app(BonusAccrual::class)->deductMasterDefect($defect);
+        }
+        $this->assertSame('0.00', (string) BonusEntry::where('user_id', $master->id)->sum('amount'));
+        $next = $this->deliveredAndFullyPaidOrder($this->author);
+        WorkOrder::factory()->create(['order_id' => $next->id, 'master_id' => $master->id, 'branch_id' => $this->branch->id, 'status' => WorkOrderStatus::Done, 'finished_at' => now()]);
+        app(OrderBalance::class)->refresh($next);
+        $this->assertSame('0.00', (string) BonusEntry::where('user_id', $master->fresh()->id)->sum('amount'));
+        $this->assertSame(2, BonusEntry::whereIn('defect_id', array_map(fn (Defect $defect): int => $defect->id, $defects))->count());
+    }
+
+    #[Test]
+    public function two_master_orders_each_earn_one_monetary_rate(): void
+    {
+        $master = User::factory()->for($this->branch)->create();
+        $master->assignRole(Role::Master->value);
+        $rule = $this->bonusRule(Role::Master, BonusBase::Count, '0');
+        $rule->update(['rate' => '25000']);
+        foreach (range(1, 2) as $i) {
+            $order = $this->deliveredAndFullyPaidOrder($this->author);
+            WorkOrder::factory()->create([
+                'order_id' => $order->id, 'branch_id' => $this->branch->id,
+                'master_id' => $master->id, 'status' => WorkOrderStatus::Done,
+                'finished_at' => now(), 'created_by' => $this->author->id,
+            ]);
+            app(OrderBalance::class)->refresh($order);
+        }
+        $this->assertSame('50000.00', (string) BonusEntry::where('user_id', $master->id)->sum('amount'));
+    }
+
+    #[Test]
+    public function partial_returns_reverse_paid_bonuses_proportionally_and_idempotently(): void
+    {
+        $seller = User::factory()->for($this->branch)->create();
+        $seller->assignRole(Role::Seller->value);
+        $this->bonusRule(Role::Seller, BonusBase::Revenue, '5');
+        $order = $this->deliveredAndFullyPaidOrder($seller);
+        app(OrderBalance::class)->refresh($order);
+        $original = BonusEntry::where('user_id', $seller->id)->firstOrFail();
+        $original->update(['status' => BonusStatus::Paid]);
+        $accrual = app(BonusAccrual::class);
+        $accrual->reverseForOrder($order, '50000');
+        $accrual->reverseForOrder($order, '50000');
+        $this->assertSame('-2500.00', (string) BonusEntry::where('reverses_id', $original->id)->sum('amount'));
+        $accrual->reverseForOrder($order, '200000');
+        $this->assertSame('-10000.00', (string) BonusEntry::where('reverses_id', $original->id)->sum('amount'));
+        $this->assertSame(BonusStatus::Paid, $original->fresh()->status);
     }
 
     private function bonusRule(Role $role, BonusBase $base, string $percent): BonusRule

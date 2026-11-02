@@ -1,3 +1,4 @@
+import { RatingForm } from './RatingForm'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -13,6 +14,8 @@ export function OrderDetailPage() {
   const t = useT()
   const { id } = useParams<{ id: string }>()
   const order = useOrder(Number(id))
+
+  if (!Number.isSafeInteger(Number(id)) || Number(id) < 1) return <div className="p-4"><ErrorBlock error={new Error(t('orders.notFound'))} /></div>
 
   return (
     <div className="space-y-4 p-4 pb-24">
@@ -31,6 +34,7 @@ export function OrderDetailPage() {
       )}
 
       {order.data !== undefined && (
+        <>
         <Card className="space-y-4">
           <div className="flex items-start justify-between">
             <h1 className="text-lg font-semibold text-neutral-950">{order.data.number}</h1>
@@ -53,6 +57,8 @@ export function OrderDetailPage() {
             <Row label={t('orders.createdAt')} value={formatDate(order.data.created_at)} />
           </dl>
         </Card>
+        {(order.data.delivered_at !== null || ['delivered', 'closed', 'returned'].includes(order.data.status)) && <RatingForm orderId={order.data.id} />}
+        </>
       )}
     </div>
   )

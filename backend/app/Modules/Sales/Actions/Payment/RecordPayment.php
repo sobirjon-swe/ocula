@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Actions\Payment;
 
+use App\Modules\Core\Models\Shift;
 use App\Modules\Core\Models\User;
 use App\Modules\Finance\Enums\CashCategory;
 use App\Modules\Finance\Services\CashRegister;
@@ -59,28 +60,29 @@ final class RecordPayment
             ]);
         }
 
-        if ($order->status === OrderStatus::Cancelled) {
-            throw ValidationException::withMessages([
-                'order' => __('sales::payment.order_cancelled'),
-            ]);
-        }
-
-        $remaining = $order->total->minus($order->paidAmount());
-
-        if ($amount->greaterThan($remaining)) {
-            throw ValidationException::withMessages([
-                'amount' => __('sales::payment.exceeds_remaining', [
-                    'remaining' => $remaining->format(),
-                ]),
-            ]);
-        }
-
         return DB::transaction(function () use ($author, $order, $amount, $method, $collectedInField): Payment {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if ($order->status === OrderStatus::Cancelled) {
+                throw ValidationException::withMessages([
+                    'order' => __('sales::payment.order_cancelled'),
+                ]);
+            }
+
+            $remaining = $order->payableTotal()->minus($order->paidAmount());
+
+            if ($amount->greaterThan($remaining)) {
+                throw ValidationException::withMessages([
+                    'amount' => __('sales::payment.exceeds_remaining', [
+                        'remaining' => $remaining->format(),
+                    ]),
+                ]);
+            }
+
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
                 'branch_id' => $order->branch_id,
-                'shift_id' => $order->shift_id,
+                'shift_id' => Shift::withoutGlobalScopes()->where('branch_id', $order->branch_id)->active()->latest('opened_at')->value('id'),
                 'amount' => $amount->toString(),
                 'method' => $method,
                 'status' => $collectedInField ? PaymentTxStatus::Pending : PaymentTxStatus::Completed,

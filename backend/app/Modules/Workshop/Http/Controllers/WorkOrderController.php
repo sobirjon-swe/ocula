@@ -53,6 +53,7 @@ final class WorkOrderController extends ApiController
             ->allowedSorts('created_at', 'due_at', 'started_at')
             ->defaultSort('-created_at', '-id')
             ->withCount('items')
+            ->with(['order.customer', 'order.prescription', 'items.variant.product'])
             ->paginate($this->perPage($request))
             ->withQueryString();
 
@@ -74,7 +75,7 @@ final class WorkOrderController extends ApiController
                 fn ($query) => $query->where('master_id', $request->integer('master_id')),
             )
             ->byUrgency()
-            ->with('items')
+            ->with(['order.customer', 'order.prescription', 'items.variant.product'])
             ->paginate($this->perPage($request, 50))
             ->withQueryString();
 
@@ -85,7 +86,7 @@ final class WorkOrderController extends ApiController
     {
         $this->authorize('view', $workOrder);
 
-        return new WorkOrderResource($workOrder->load('items.variant'));
+        return new WorkOrderResource($workOrder->load(['order.customer', 'order.prescription', 'items.variant.product']));
     }
 
     public function assign(
@@ -174,7 +175,7 @@ final class WorkOrderController extends ApiController
             $workOrder,
             $item,
             DefectReason::from($request->string('reason')->toString()),
-            $request->string('note')->toString(),
+            $request->string('note')->toString() ?: $request->string('reason')->toString(),
             $request->integer('quantity') ?: 1,
             $request->string('photo_path')->toString() ?: null,
         );

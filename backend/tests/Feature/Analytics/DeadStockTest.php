@@ -67,11 +67,17 @@ final class DeadStockTest extends TestCase
         $neverSoldVariant = $this->variant();
         $ledger->receive($this->director, $this->warehouse, $neverSoldVariant->id, 5, Money::of('10000'));
 
+        $oldNeverSoldVariant = $this->variant();
+        $this->travelTo(now()->subDays(120));
+        $ledger->receive($this->director, $this->warehouse, $oldNeverSoldVariant->id, 5, Money::of('10000'));
+        $this->travelBack();
+
         $result = app(DeadStockReportService::class)->generate($this->director, null, 90);
         $deadVariantIds = collect($result)->pluck('variant_id')->all();
 
         $this->assertContains($staleVariant->id, $deadVariantIds);
-        $this->assertContains($neverSoldVariant->id, $deadVariantIds);
+        $this->assertNotContains($neverSoldVariant->id, $deadVariantIds);
+        $this->assertContains($oldNeverSoldVariant->id, $deadVariantIds);
         $this->assertNotContains($freshVariant->id, $deadVariantIds);
     }
 

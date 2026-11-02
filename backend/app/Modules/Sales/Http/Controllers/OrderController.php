@@ -4,24 +4,31 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Modules\Core\Enums\SettingKey;
 use App\Modules\Core\Models\Branch;
+use App\Modules\Core\Models\Setting;
 use App\Modules\Sales\Actions\Order\CancelOrder;
 use App\Modules\Sales\Actions\Order\ChangeOrderStatus;
 use App\Modules\Sales\Actions\Order\CreateOrder;
 use App\Modules\Sales\Actions\Order\DeliverOrder;
+use App\Modules\Sales\Actions\Payment\RecordPayment;
 use App\Modules\Sales\Enums\OrderDeliveryType;
 use App\Modules\Sales\Enums\OrderStatus;
 use App\Modules\Sales\Enums\OrderType;
+use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Http\Requests\Order\ChangeOrderStatusRequest;
+use App\Modules\Sales\Http\Requests\Order\CheckoutRequest;
 use App\Modules\Sales\Http\Requests\Order\StoreOrderRequest;
 use App\Modules\Sales\Http\Resources\OrderResource;
 use App\Modules\Sales\Models\Order;
+use App\Modules\Sales\Services\CreditApproval;
 use App\Support\Http\ApiController;
 use App\Support\Http\ApiResponse;
 use App\Support\Money\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -37,6 +44,66 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 final class OrderController extends ApiController
 {
+    public function posConfig(): JsonResponse
+    {
+        $this->authorize('create', Order::class);
+
+        return ApiResponse::data([
+            'money_rounding_step' => (string) Setting::valueFor(SettingKey::MoneyRoundingStep),
+            'discount_limit_percent' => (int) Setting::valueFor(SettingKey::DiscountLimitPercent),
+            'min_prepayment_percent' => (int) Setting::valueFor(SettingKey::MinPrepaymentPercent),
+        ]);
+    }
+
+    public function checkout(CheckoutRequest $request, CreateOrder $create, DeliverOrder $deliver, RecordPayment $pay): JsonResponse
+    {
+        $this->authorize('create', Order::class);
+        abort_unless($request->user()->can('sales.payment.create'), 403);
+        $actor = $this->currentUser($request);
+        $branch = Branch::findOrFail($request->integer('branch_id'));
+        if (! $actor->canAccessAllBranches() && ! in_array($branch->id, $actor->accessibleBranchIds(), true)) {
+            throw ValidationException::withMessages(['branch_id' => __('core::shift.foreign_branch')]);
+        }
+        $order = DB::transaction(function () use ($request, $actor, $branch, $create, $deliver, $pay): Order {
+            $order = $create->handle($actor, $branch, OrderType::Quick, $this->items($request),
+                $request->integer('customer_id') ?: null,
+                Money::of($request->string('discount')->toString() ?: '0'),
+                OrderDeliveryType::from($request->string('delivery_type')->toString() ?: 'pickup'),
+                $request->string('due_date')->toString() ?: null,
+                $request->integer('prescription_id') ?: null,
+                deferDelivery: true,
+            );
+            foreach ($request->array('payments') as $payment) {
+                $pay->handle($actor, $order->fresh(), Money::of((string) $payment['amount']), PaymentMethod::from($payment['method']));
+            }
+            $this->authorize('deliver', $order);
+
+            return $deliver->handle($actor, $order->fresh());
+        });
+
+        return ApiResponse::created((new OrderResource($order->load(['customer', 'items', 'payments'])))->resolve($request));
+    }
+
+    public function approveDebt(Request $request, Order $order): OrderResource
+    {
+        abort_unless($request->user()->hasRole('director') && $request->user()->can('finance.debt.approve'), 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:2000']]);
+
+        return DB::transaction(function () use ($request, $order, $data): OrderResource {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if (! $order->status->canBeDelivered()) {
+                throw ValidationException::withMessages(['status' => __('sales::order.credit_approval_not_deliverable')]);
+            }
+            $order->update([
+                'debt_approved_by' => $request->user()->id, 'debt_approved_at' => now(),
+                'debt_approval_reason' => $data['reason'],
+                'debt_approved_amount' => app(CreditApproval::class)->exposure($order)->toString(),
+            ]);
+
+            return new OrderResource($order);
+        });
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Order::class);
@@ -65,7 +132,7 @@ final class OrderController extends ApiController
     {
         $this->authorize('view', $order);
 
-        return new OrderResource($order->load(['customer', 'items', 'payments']));
+        return new OrderResource($order->load(['customer', 'items.itemable', 'payments']));
     }
 
     public function store(StoreOrderRequest $request, CreateOrder $create): JsonResponse

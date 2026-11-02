@@ -6,6 +6,7 @@ namespace Tests\Feature\Finance;
 
 use App\Modules\Core\Models\Branch;
 use App\Modules\Core\Models\User;
+use App\Modules\Finance\Actions\Debt\WriteOffDebt;
 use App\Modules\Finance\Enums\DebtStatus;
 use App\Modules\Finance\Models\Debt;
 use App\Modules\Finance\Services\DebtRegistry;
@@ -42,6 +43,35 @@ final class DebtRegistryTest extends TestCase
         $this->branch = Branch::factory()->create(['code' => 'K']);
         $this->customer = Customer::factory()->create();
         $this->registry = app(DebtRegistry::class);
+    }
+
+    #[Test]
+    public function returns_reduce_the_mirror_and_a_reversed_payment_reopens_a_paid_debt(): void
+    {
+        $order = $this->orderWith(total: '200000', paid: '0', debt: '200000', dueDate: now()->addDays(5));
+        $this->registry->syncForOrder($order);
+        $order->update(['paid' => '200000', 'debt' => '0']);
+        $this->registry->syncForOrder($order);
+        $order->returns()->create(['number' => 'K-2610-00001', 'branch_id' => $this->branch->id, 'reason' => 'other', 'amount' => '100000', 'cost_total' => '0', 'created_by' => $order->created_by]);
+        $order->update(['paid' => '50000', 'debt' => '50000']);
+        $this->registry->syncForOrder($order);
+        $debt = Debt::query()->firstOrFail();
+        $this->assertSame(DebtStatus::Open, $debt->status);
+        $this->assertNull($debt->closed_at);
+        $this->assertSame('100000.00', $debt->amount->toString());
+        $this->assertSame('50000.00', $debt->remaining()->toString());
+        $this->assertSame('50000.00', $this->customer->fresh()->debt_balance->toString());
+    }
+
+    #[Test]
+    public function writing_off_debt_updates_the_customer_collectible_balance(): void
+    {
+        $order = $this->orderWith(total: '200000', paid: '0', debt: '200000', dueDate: now()->addDays(5));
+        $this->registry->syncForOrder($order);
+        $debt = Debt::query()->firstOrFail();
+        app(WriteOffDebt::class)->handle(User::findOrFail($order->created_by), $debt, 'Confirmed unrecoverable');
+        $this->assertSame('0.00', $this->customer->fresh()->debt_balance->toString());
+        $this->assertSame('200000.00', $order->fresh()->debt->toString());
     }
 
     #[Test]

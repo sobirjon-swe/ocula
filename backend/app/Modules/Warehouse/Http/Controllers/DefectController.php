@@ -4,9 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Warehouse\Http\Controllers;
 
+use App\Modules\Core\Models\Location;
+use App\Modules\Warehouse\Actions\Defect\ReportDefect;
+use App\Modules\Warehouse\Enums\DefectReason;
+use App\Modules\Warehouse\Http\Requests\StoreDefectRequest;
 use App\Modules\Warehouse\Http\Resources\DefectResource;
 use App\Modules\Warehouse\Models\Defect;
+use App\Modules\Warehouse\Models\Transfer;
 use App\Support\Http\ApiController;
+use App\Support\Http\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -19,12 +26,28 @@ use Spatie\QueryBuilder\QueryBuilder;
  * tug'dirgan bo'lishi mumkin. Xato bo'lsa harakat storno qilinadi
  * (7.21).
  *
- * Brak yozuvi ustaxonadan (`POST /work-orders/{id}/defect`) yoki
- * qaytarishdan avtomatik tug'iladi — shuning uchun bu yerda `store`
- * yo'q: "usta faqat sababni tanlaydi, qolganini tizim qiladi".
+ * Brak ustaxona/qaytarish jarayonidan yoki vakolatli ombor xodimining
+ * alohida hisobdan chiqarish formasidan yaratiladi.
  */
 final class DefectController extends ApiController
 {
+    public function store(StoreDefectRequest $request, ReportDefect $action): JsonResponse
+    {
+        $actor = $this->currentUser($request);
+        abort_unless($actor->can('warehouse.defect.report'), 403);
+        $location = Location::findOrFail($request->integer('location_id'));
+        $links = [];
+        if ($request->filled('transfer_id')) {
+            $transfer = Transfer::findOrFail($request->integer('transfer_id'));
+            $links['transfer_id'] = $transfer->id;
+        }
+        $defect = $action->handle($actor, $location, $request->integer('variant_id'), $request->integer('quantity'),
+            DefectReason::from($request->string('reason')->toString()),
+            $request->string('note')->toString() ?: $request->string('reason')->toString(), $links);
+
+        return ApiResponse::created((new DefectResource($defect))->resolve($request));
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Defect::class);

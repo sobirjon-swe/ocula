@@ -12,6 +12,7 @@ use App\Modules\Finance\Models\Debt;
 use App\Modules\Telegram\Actions\SendTelegramNotification;
 use App\Modules\Telegram\Enums\NotificationStatus;
 use App\Modules\Telegram\Enums\NotificationType;
+use App\Modules\Telegram\Models\SmsNotification;
 use App\Modules\Telegram\Services\CustomerMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -73,7 +74,7 @@ final class SendDebtReminders extends Command
 
                 if ($result?->status === NotificationStatus::Sent) {
                     $sent++;
-                    $reminder->handle(null, $debt, ReminderChannel::Telegram);
+                    $reminder->handle(null, $debt, $result instanceof SmsNotification ? ReminderChannel::Sms : ReminderChannel::Telegram);
                 }
             }
         }

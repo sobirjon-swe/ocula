@@ -17,6 +17,7 @@ enum SupplierTxType: string
 {
     case Purchase = 'purchase';
     case Payment = 'payment';
+    case Return = 'return';
     case Correction = 'correction';
 
     /**

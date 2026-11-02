@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'merge_incompatible' => 'Shu turdagi faol va hali birlashtirilmagan tovarni tanlang.',
     'has_variants' => "Tovarning variantlari bor — o'chirib bo'lmaydi. "
         ."Uni katalogdan yashirish uchun 'faol emas' qiling yoki dublikat bo'lsa birlashtiring.",
     'merge_into_itself' => "Tovarni o'ziga birlashtirib bo'lmaydi.",

@@ -6,19 +6,23 @@ import { useSession } from '@/lib/session'
 
 /** Token nomi — xodim "qaysi qurilmadan kirganman" ro'yxatida shu ko'rinadi. */
 function deviceName(): string {
-  return `Admin panel · ${navigator.platform || 'web'}`
+    return `Admin panel · ${navigator.platform || 'web'}`
 }
 
 export function useLogin() {
-  const signIn = useSession((state) => state.signIn)
+    const signIn = useSession((state) => state.signIn)
+    const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: (input: { phone: string; password: string }) =>
-      api.post<Envelope<LoginResult>>('/auth/login', {
-        body: { ...input, device_name: deviceName() },
-      }),
-    onSuccess: (response) => signIn(response.data),
-  })
+    return useMutation({
+        mutationFn: (input: { phone: string; password: string }) =>
+            api.post<Envelope<LoginResult>>('/auth/login', {
+                body: { ...input, device_name: deviceName() },
+            }),
+        onSuccess: (response) => {
+            queryClient.clear()
+            signIn(response.data)
+        },
+    })
 }
 
 /**
@@ -27,37 +31,52 @@ export function useLogin() {
  * o'zgartirsa, xodim qayta kirmasdan yangi ro'yxatni oladi.
  */
 export function useMe() {
-  const token = useSession((state) => state.token)
-  const setUser = useSession((state) => state.setUser)
+    const token = useSession((state) => state.token)
+    const setUser = useSession((state) => state.setUser)
 
-  return useQuery({
-    queryKey: ['auth', 'me'],
-    enabled: token !== null,
-    retry: false,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const response = await api.get<Envelope<User> & { meta?: { permissions?: string[] } }>(
-        '/auth/me',
-      )
+    return useQuery({
+        queryKey: ['auth', 'me', token],
+        enabled: token !== null,
+        retry: false,
+        staleTime: 60_000,
+        queryFn: async () => {
+            const response = await api.get<
+                Envelope<User> & { meta?: { permissions?: string[] } }
+            >('/auth/me')
 
-      setUser(response.data, response.meta?.permissions ?? [])
+            setUser(response.data, response.meta?.permissions ?? [])
 
-      return response.data
-    },
-  })
+            return response.data
+        },
+    })
 }
 
 export function useLogout() {
-  const signOut = useSession((state) => state.signOut)
-  const queryClient = useQueryClient()
+    const signOut = useSession((state) => state.signOut)
+    const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: () => api.post<null>('/auth/logout'),
-    // Token allaqachon yaroqsiz bo'lsa ham lokal sessiya tozalanadi —
-    // xodim "chiqa olmayapman" holatida qolib ketmasin.
-    onSettled: () => {
-      signOut()
-      queryClient.clear()
-    },
-  })
+    return useMutation({
+        mutationFn: () => api.post<null>('/auth/logout'),
+        // Token allaqachon yaroqsiz bo'lsa ham lokal sessiya tozalanadi —
+        // xodim "chiqa olmayapman" holatida qolib ketmasin.
+        onSettled: () => {
+            signOut()
+            queryClient.clear()
+        },
+    })
+}
+export function usePinLogin() {
+    const queryClient = useQueryClient()
+    const signIn = useSession((state) => state.signIn)
+    return useMutation({
+        mutationFn: (input: {
+            device_id: number
+            device_token: string
+            pin: string
+        }) => api.post<Envelope<LoginResult>>('/auth/pin', { body: input }),
+        onSuccess: (response) => {
+            queryClient.clear()
+            signIn(response.data)
+        },
+    })
 }

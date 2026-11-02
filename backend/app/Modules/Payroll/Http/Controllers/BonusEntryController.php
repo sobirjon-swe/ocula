@@ -31,11 +31,11 @@ final class BonusEntryController extends ApiController
 
         $actor = $this->currentUser($request);
 
-        $entries = QueryBuilder::for(BonusEntry::class)
-            ->when(
-                ! $actor->can('payroll.bonus.view_any'),
-                fn ($query) => $query->where('user_id', $actor->id),
-            )
+        $query = BonusEntry::query();
+        if (! $actor->can('payroll.bonus.view_any')) {
+            $query->where('user_id', $actor->id);
+        }
+        $entries = QueryBuilder::for($query)
             ->allowedFilters(
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('period'),

@@ -2,11 +2,15 @@
 
 namespace App\Providers;
 
+use App\Support\Audit\DomainAudit;
+use App\Support\Contracts\ReceiptPrinter;
+use App\Support\Printing\HtmlReceiptPrinter;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use InvalidArgumentException;
@@ -18,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(ReceiptPrinter::class, HtmlReceiptPrinter::class);
     }
 
     /**
@@ -28,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureFactories();
+        foreach (['created', 'updated', 'deleted'] as $verb) {
+            Event::listen('eloquent.'.$verb.': App\\Modules\\*', [DomainAudit::class, 'record']);
+        }
     }
 
     /**

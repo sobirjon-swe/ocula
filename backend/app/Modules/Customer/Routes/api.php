@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use App\Modules\Customer\Http\Controllers\AuthController;
+use App\Modules\Customer\Http\Controllers\CheckInController;
 use App\Modules\Customer\Http\Controllers\DebtController;
 use App\Modules\Customer\Http\Controllers\DeliveryConfirmationController;
 use App\Modules\Customer\Http\Controllers\OrderController;
 use App\Modules\Customer\Http\Controllers\PrescriptionController;
 use App\Modules\Customer\Http\Controllers\ProfileController;
+use App\Modules\Customer\Http\Controllers\RatingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,11 +27,15 @@ Route::prefix('customer')->name('api.customer.')->group(function (): void {
     Route::post('auth/telegram', [AuthController::class, 'telegram'])->name('auth.telegram');
 
     Route::middleware('auth:customer')->group(function (): void {
+        Route::get('visits', [CheckInController::class, 'index']);
+        Route::post('visits', [CheckInController::class, 'store'])->middleware(['idempotency', 'throttle:10,1']);
         Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
         Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('orders/{order}/rating', [RatingController::class, 'show']);
+        Route::post('orders/{order}/rating', [RatingController::class, 'store']);
 
         Route::get('prescriptions', [PrescriptionController::class, 'index'])->name('prescriptions.index');
 

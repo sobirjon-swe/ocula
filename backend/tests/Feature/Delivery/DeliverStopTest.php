@@ -148,6 +148,6 @@ final class DeliverStopTest extends TestCase
     private function deliver(int $stopId): TestResponse
     {
         return $this->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
-            ->postJson("/api/v1/trip-stops/{$stopId}/deliver");
+            ->postJson("/api/v1/trip-stops/{$stopId}/deliver", ['lat' => '41.31', 'lng' => '69.28']);
     }
 }

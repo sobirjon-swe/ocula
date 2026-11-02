@@ -20,9 +20,9 @@ class DeliverStopRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lat' => ['nullable', 'numeric', 'between:-90,90'],
-            'lng' => ['nullable', 'numeric', 'between:-180,180'],
-            'photo_path' => ['nullable', 'string', 'max:255'],
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+            'photo' => ['nullable', 'string', 'max:2800000', 'regex:/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/'],
         ];
     }
 }

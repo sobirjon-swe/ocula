@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'refund_exceeds_return' => 'The refund cannot exceed the value of the returned items.',
     'no_items' => 'The return has no lines.',
     'order_not_delivered' => 'The goods have not been delivered yet — cancel the order instead.',
     'quantity_exceeds_sold' => 'That many were not sold or were already returned: :available can be returned.',

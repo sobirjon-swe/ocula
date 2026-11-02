@@ -83,8 +83,8 @@ final class AnalyticsController extends ApiController
 
             return CsvResponse::stream(
                 'abc-analysis.csv',
-                ['variant_id', 'revenue', 'quantity', 'cumulative_percent', 'tier'],
-                collect($rows)->map(fn (array $row): array => array_values($row)),
+                ['variant_id', 'product_id', 'catalog_status', 'revenue', 'quantity', 'cumulative_percent', 'tier'],
+                collect($rows)->map(fn (array $row): array => array_map(fn (string $key) => $row[$key] ?? null, ['variant_id', 'product_id', 'catalog_status', 'revenue', 'quantity', 'cumulative_percent', 'tier'])),
             );
         }
 

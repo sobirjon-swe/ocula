@@ -26,6 +26,7 @@ export type Paginated<T> = {
 }
 
 export type ListParams = {
+  active?: 1
   page?: number
   per_page?: number
 }

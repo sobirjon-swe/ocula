@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Modules\Catalog\Http\Controllers\BrandController;
 use App\Modules\Catalog\Http\Controllers\CategoryController;
+use App\Modules\Catalog\Http\Controllers\DuplicateProductsController;
 use App\Modules\Catalog\Http\Controllers\PriceController;
 use App\Modules\Catalog\Http\Controllers\ProductController;
 use App\Modules\Catalog\Http\Controllers\ProductVariantController;
 use App\Modules\Catalog\Http\Controllers\PublicServiceController;
 use App\Modules\Catalog\Http\Controllers\ServiceController;
+use App\Modules\Catalog\Http\Controllers\VariantLookupController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,13 +29,15 @@ Route::middleware('throttle:30,1')->prefix('public')->name('api.public.')->group
 });
 
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
+    Route::get('catalog-variants', VariantLookupController::class);
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('services', ServiceController::class);
 
     // `pending` — `{product}` dan oldin, aks holda "pending" id deb o'qiladi.
     Route::get('products/pending', [ProductController::class, 'pending'])->name('products.pending');
-    Route::post('products/quick', [ProductController::class, 'quickStore'])->name('products.quick');
+    Route::get('products/duplicates', DuplicateProductsController::class)->name('products.duplicates');
+    Route::post('products/quick', [ProductController::class, 'quickStore'])->middleware('idempotency')->name('products.quick');
     Route::apiResource('products', ProductController::class);
 
     Route::post('products/{product}/approve', [ProductController::class, 'approve'])

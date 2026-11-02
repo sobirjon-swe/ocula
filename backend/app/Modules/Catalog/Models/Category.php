@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Models;
 
+use App\Support\Concerns\HasLocalizedName;
 use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,16 +21,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */
-    use HasFactory;
+    use HasFactory, HasLocalizedName;
 
-    protected $fillable = ['name', 'parent_id', 'sort', 'is_active'];
+    protected $fillable = ['name', 'name_translations', 'parent_id', 'sort', 'is_active'];
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'name_translations' => 'array'];
     }
 
     /**

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -10,7 +11,8 @@ import { OrderStatusBadge, PaymentStatusBadge } from './StatusBadge'
 
 export function OrdersPage() {
   const t = useT()
-  const orders = useOrders()
+  const [page,setPage] = useState(1)
+  const orders = useOrders(page)
 
   return (
     <div className="space-y-4 p-4 pb-24">
@@ -41,6 +43,7 @@ export function OrdersPage() {
           </Link>
         ))}
       </div>
+      <nav aria-label="Pagination" className="flex justify-between gap-4"><button className="min-h-11 px-3 disabled:opacity-40" disabled={page===1} onClick={()=>setPage(page-1)}>{t('page.previous')}</button><span className="py-3">{page}</span><button className="min-h-11 px-3 disabled:opacity-40" disabled={orders.data===undefined || page>=(orders.data?.meta.last_page??1)} onClick={()=>setPage(page+1)}>{t('page.next')}</button></nav>
     </div>
   )
 }

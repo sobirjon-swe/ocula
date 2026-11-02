@@ -7,6 +7,7 @@ namespace App\Modules\Telegram\Actions;
 use App\Modules\Sales\Models\Customer;
 use App\Modules\Telegram\Enums\NotificationStatus;
 use App\Modules\Telegram\Enums\NotificationType;
+use App\Modules\Telegram\Models\SmsNotification;
 use App\Modules\Telegram\Models\TelegramNotification;
 use App\Modules\Telegram\Services\TelegramClient;
 use Illuminate\Database\Eloquent\Model;
@@ -35,9 +36,9 @@ final class SendTelegramNotification
         ?Model $source = null,
         ?string $dedupeKey = null,
         ?array $replyMarkup = null,
-    ): ?TelegramNotification {
+    ): TelegramNotification|SmsNotification|null {
         if ($customer->telegram_id === null) {
-            return null;
+            return app(SendSmsFallback::class)->handle($customer, $type, $message, $dedupeKey);
         }
 
         if ($dedupeKey !== null && TelegramNotification::query()->where('dedupe_key', $dedupeKey)->exists()) {
@@ -53,7 +54,7 @@ final class SendTelegramNotification
             $error = $exception->getMessage();
         }
 
-        return TelegramNotification::create([
+        $notification = TelegramNotification::create([
             'customer_id' => $customer->id,
             'chat_id' => $customer->telegram_id,
             'type' => $type,
@@ -64,5 +65,10 @@ final class SendTelegramNotification
             'status' => $status,
             'error' => $error,
         ]);
+        if ($status === NotificationStatus::Failed) {
+            return app(SendSmsFallback::class)->handle($customer, $type, $message, $dedupeKey) ?? $notification;
+        }
+
+        return $notification;
     }
 }

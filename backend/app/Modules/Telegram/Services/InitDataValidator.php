@@ -31,11 +31,18 @@ final class InitDataValidator
 
         parse_str($initData, $fields);
 
-        if (! is_array($fields) || ! isset($fields['hash']) || ! is_string($fields['hash'])) {
+        if (! isset($fields['hash']) || ! is_string($fields['hash'])) {
             return null;
         }
 
-        /** @var array<string, string> $fields */
+        $validated = [];
+        foreach ($fields as $key => $value) {
+            if (! is_string($key) || ! is_string($value)) {
+                return null;
+            }
+            $validated[$key] = $value;
+        }
+        $fields = $validated;
         $hash = $fields['hash'];
         unset($fields['hash']);
 

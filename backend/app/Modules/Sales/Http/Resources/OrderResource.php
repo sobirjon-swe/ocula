@@ -42,6 +42,10 @@ class OrderResource extends JsonResource
             'total_formatted' => $this->total->format(),
             'paid' => $this->paid->toString(),
             'debt' => $this->debt->toString(),
+            'debt_approved_by' => $this->debt_approved_by,
+            'debt_approved_at' => $this->debt_approved_at,
+            'debt_approval_reason' => $this->debt_approval_reason,
+            'debt_approved_amount' => $this->debt_approved_amount,
             'cost_total' => $this->when(
                 $request->user()?->can('catalog.cost.view') ?? false,
                 fn (): string => $this->cost_total->toString(),

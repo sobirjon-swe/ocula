@@ -35,29 +35,36 @@ final class EnsureIdempotency
     {
         $key = $request->header(self::HEADER);
 
-        if (! is_string($key) || trim($key) === '') {
+        if (! is_string($key) || trim($key) === '' || strlen(trim($key)) > 64) {
             return ApiResponse::error(
-                "Bu amal uchun '".self::HEADER."' sarlavhasi majburiy. "
-                .'Har bir urinishga bitta noyob kalit yuboring.',
+                __('core::api.idempotency_required'),
                 status: Response::HTTP_BAD_REQUEST,
             );
         }
 
         $key = trim($key);
         $endpoint = $request->method().' '.$request->path();
-        $hash = hash('sha256', $endpoint.'|'.$request->getContent());
+        $actor = $request->user();
+        $identity = $actor === null ? 'anonymous' : $actor::class.':'.$actor->getAuthIdentifier();
+        $hash = hash('sha256', $identity.'|'.$endpoint.'|'.$request->getContent());
 
-        $existing = $this->claim($key, $endpoint, $hash, $request);
+        return DB::transaction(function () use ($key, $endpoint, $hash, $request, $next): Response {
+            $existing = $this->claim($key, $endpoint, $hash, $request);
 
-        if ($existing !== null) {
-            return $this->replay($existing, $hash);
-        }
+            if ($existing !== null) {
+                return $this->replay($existing, $hash);
+            }
 
-        $response = $next($request);
+            $response = $next($request);
 
-        $this->store($key, $response);
+            if ($response->getStatusCode() >= 400) {
+                DB::table('idempotency_keys')->where('key', $key)->delete();
+            } else {
+                $this->store($key, $response);
+            }
 
-        return $response;
+            return $response;
+        });
     }
 
     /**
@@ -110,8 +117,7 @@ final class EnsureIdempotency
     {
         if ($record['request_hash'] !== $hash) {
             return ApiResponse::error(
-                "Bu 'Idempotency-Key' boshqa so'rov uchun ishlatilgan. "
-                .'Yangi amal uchun yangi kalit yuboring.',
+                __('core::api.idempotency_conflict'),
                 status: Response::HTTP_CONFLICT,
             );
         }
@@ -120,7 +126,7 @@ final class EnsureIdempotency
 
         if ($body === null) {
             return ApiResponse::error(
-                "Avvalgi so'rov hali bajarilmoqda. Bir necha soniyadan keyin qayta urinib ko'ring.",
+                __('core::api.idempotency_processing'),
                 status: Response::HTTP_CONFLICT,
             );
         }

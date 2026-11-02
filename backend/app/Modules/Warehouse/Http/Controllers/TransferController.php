@@ -20,6 +20,7 @@ use App\Modules\Warehouse\Models\Transfer;
 use App\Support\Http\ApiController;
 use App\Support\Http\ApiResponse;
 use App\Support\Money\Money;
+use App\Support\Storage\ImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -114,6 +115,9 @@ final class TransferController extends ApiController
         $this->authorize('send', $transfer);
 
         $taxiCost = $request->string('taxi_cost')->toString();
+        $receipt = $request->filled('taxi_receipt_photo')
+            ? app(ImageStorage::class)->store($request->string('taxi_receipt_photo')->toString(), 'transfers/'.$transfer->id, 'taxi_receipt_photo')
+            : ($request->string('taxi_receipt_path')->toString() ?: null);
 
         $sent = $send->handle(
             $this->currentUser($request),
@@ -121,7 +125,7 @@ final class TransferController extends ApiController
             DeliveryMethod::from($request->string('delivery_method')->toString()),
             $request->integer('carrier_id') ?: null,
             $taxiCost === '' ? null : Money::of($taxiCost),
-            $request->string('taxi_receipt_path')->toString() ?: null,
+            $receipt,
         );
 
         return new TransferResource($sent->load('items'));

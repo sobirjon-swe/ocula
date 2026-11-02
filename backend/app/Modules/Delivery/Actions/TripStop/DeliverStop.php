@@ -50,6 +50,10 @@ final class DeliverStop
         }
 
         return DB::transaction(function () use ($driver, $stop, $lat, $lng, $photoPath): TripStop {
+            $stop = TripStop::query()->lockForUpdate()->findOrFail($stop->id);
+            if (! $stop->status->canBeDelivered()) {
+                throw ValidationException::withMessages(['status' => __('delivery::stop.cannot_deliver', ['status' => $stop->status->value])]);
+            }
             $stop->update([
                 'status' => TripStopStatus::Delivered,
                 'delivered_at' => now(),
@@ -76,27 +80,25 @@ final class DeliverStop
         /** @var Order $order */
         $order = $stop->order()->firstOrFail();
 
-        if ($order->status->canBeDelivered()) {
-            $this->deliverOrder->handle($driver, $order);
-        }
-
         $remaining = $order->fresh()->total->minus($order->fresh()->paidAmount());
         $toCollect = $stop->cash_to_collect->greaterThan($remaining) ? $remaining : $stop->cash_to_collect;
 
-        if (! $toCollect->isPositive()) {
-            return;
+        if ($toCollect->isPositive()) {
+            $this->recordPayment->handle(
+                $driver,
+                $order->fresh(),
+                $toCollect,
+                PaymentMethod::Cash,
+                collectedInField: true,
+            );
+
+            $this->cashLedger->credit($driver->id, $toCollect);
+            $trip = $stop->trip()->lockForUpdate()->firstOrFail();
+            $trip->update(['cash_collected' => $trip->cash_collected->plus($toCollect)->toString()]);
         }
-
-        $this->recordPayment->handle(
-            $driver,
-            $order->fresh(),
-            $toCollect,
-            PaymentMethod::Cash,
-            collectedInField: true,
-        );
-
-        $this->cashLedger->credit($driver->id, $toCollect);
-        $stop->trip()->increment('cash_collected', $toCollect->toString());
+        if ($order->fresh()->status->canBeDelivered()) {
+            $this->deliverOrder->handle($driver, $order->fresh());
+        }
     }
 
     private function distanceFor(TripStop $stop, ?string $lat, ?string $lng): ?int

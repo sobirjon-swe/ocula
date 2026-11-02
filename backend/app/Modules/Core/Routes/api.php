@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Modules\Core\Http\Controllers\AuditLogController;
 use App\Modules\Core\Http\Controllers\AuthController;
 use App\Modules\Core\Http\Controllers\BranchController;
 use App\Modules\Core\Http\Controllers\DeviceController;
+use App\Modules\Core\Http\Controllers\ProfileLocaleController;
 use App\Modules\Core\Http\Controllers\PublicBranchController;
 use App\Modules\Core\Http\Controllers\SettingController;
 use App\Modules\Core\Http\Controllers\ShiftController;
@@ -34,15 +36,18 @@ Route::prefix('auth')->name('api.auth.')->group(function (): void {
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('me', [AuthController::class, 'me'])->name('me');
+        Route::put('locale', ProfileLocaleController::class)->name('locale');
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     });
 });
 
 Route::middleware('auth:sanctum')->name('api.')->group(function (): void {
+    Route::get('audit-log', AuditLogController::class);
     Route::apiResource('branches', BranchController::class);
 
     Route::apiResource('users', UserController::class);
     Route::put('users/{user}/roles', [UserController::class, 'assignRoles'])->name('users.roles');
+    Route::put('users/{user}/branches', [UserController::class, 'assignBranches'])->name('users.branches');
     Route::put('users/{user}/debt-limit', [UserController::class, 'setDebtLimit'])->name('users.debt-limit');
     Route::put('users/{user}/pin', [UserController::class, 'setPin'])->name('users.pin');
 

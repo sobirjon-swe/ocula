@@ -1,0 +1,134 @@
+name: optika
+
+x-backend: &backend
+  build:
+    context: ../..
+    dockerfile: docs/deployment/php.Dockerfile
+  env_file: .env.app
+  environment:
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_PORT: 5432
+    DB_DATABASE: ${POSTGRES_DB:-optika}
+    DB_USERNAME: optika
+    DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+  volumes:
+    - storage:/var/www/backend/storage
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-optika}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD:?Set PG_ADMIN_PASSWORD}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/10-optika.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command: [sh, -c, 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --maxmemory-policy noeviction']
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    <<: *backend
+    healthcheck:
+      test: [CMD, php, -r, 'exit(@fsockopen("127.0.0.1", 9000) ? 0 : 1);']
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    <<: *backend
+    command: [php, artisan, horizon]
+    stop_grace_period: 90s
+    healthcheck:
+      test: [CMD, php, artisan, horizon:status]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  scheduler:
+    <<: *backend
+    command: [php, artisan, schedule:work]
+    stop_grace_period: 90s
+    healthcheck:
+      test: [CMD, php, -r, 'exit(str_contains(file_get_contents("/proc/1/cmdline"), "schedule:work") ? 0 : 1);']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  landing:
+    build:
+      context: ../..
+      dockerfile: docs/deployment/landing.Dockerfile
+    environment:
+      BACKEND_API_URL: http://web:8081/api/v1
+      SITE_URL: ${SITE_URL:?Set public HTTPS SITE_URL}
+      CUSTOMER_APP_URL: https://${CUSTOMER_HOST:?Set CUSTOMER_HOST}
+      TELEGRAM_MINI_APP_URL: ${TELEGRAM_MINI_APP_URL:-}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3000/en").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: ../..
+      dockerfile: docs/deployment/web.Dockerfile
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Set PUBLIC_HOST}
+      ADMIN_HOST: ${ADMIN_HOST:?Set ADMIN_HOST}
+      CUSTOMER_HOST: ${CUSTOMER_HOST:?Set CUSTOMER_HOST}
+      NGINX_ENVSUBST_FILTER: '^(PUBLIC_HOST|ADMIN_HOST|CUSTOMER_HOST)$$'
+    ports:
+      - '${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:8080'
+    volumes:
+      - storage:/var/www/backend/storage:ro
+    depends_on:
+      app:
+        condition: service_healthy
+      landing:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8081/api/v1/ping]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  database:
+  redis:
+  storage:

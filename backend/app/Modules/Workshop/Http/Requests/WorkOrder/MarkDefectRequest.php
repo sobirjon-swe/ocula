@@ -24,7 +24,7 @@ class MarkDefectRequest extends FormRequest
         return [
             'item_id' => ['required', 'integer', 'exists:work_order_items,id'],
             'reason' => ['required', Rule::enum(DefectReason::class)],
-            'note' => ['required', 'string', 'min:3', 'max:2000'],
+            'note' => ['nullable', 'string', 'max:2000'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'photo_path' => ['nullable', 'string', 'max:255'],
         ];
