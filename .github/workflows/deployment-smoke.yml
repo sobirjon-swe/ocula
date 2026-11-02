@@ -1,0 +1,27 @@
+name: deployment smoke
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '.github/workflows/deployment-smoke.yml'
+      - 'docs/deployment/**'
+      - 'backend/**'
+      - 'admin/**'
+      - 'customer/**'
+      - 'landing/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build, boot and restore isolated production containers
+        run: bash docs/deployment/smoke.sh
